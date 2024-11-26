@@ -1,35 +1,26 @@
 package animals;
 
 import actions.RabbitHole;
+import biodiversity.Grass;
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
 import itumulator.world.NonBlocking;
 import itumulator.world.World;
 import itumulator.executable.Program;
-import biodiversity.Grass;
 
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Set;
 
-public class Rabbit implements Actor {
+public class Rabbit extends Animal {//implements Actor {
 
-    private Location location;
-    private World world;
-    private int energy;
-    private int age;
-    private boolean isPlaced;
     private RabbitHole homeHole;
-    private Program program;
-    private static final int DIGGING_ENERGY_COST = 10;
-    private static final int EATING_ENERGY_GAIN = 20;
 
     public Rabbit(World world, Location initialLocation, Program program) {
-        this.world = world;
+        super(world, initialLocation, program);
         this.energy = 100;
         this.age = 0;
         this.isPlaced = placeRabbit(initialLocation);
-        this.program = program;
     }
 
     private int initialEnergy() {
@@ -38,7 +29,7 @@ public class Rabbit implements Actor {
 
     private boolean placeRabbit(Location initialLocation) {
         int attempts = 0;
-        int maxAttempts = world.getSize() * world.getSize();
+        int maxAttempts = 2; //world.getSize() * world.getSize();
         Random random = new Random();
 
         while (attempts < maxAttempts) {
@@ -72,13 +63,13 @@ public class Rabbit implements Actor {
     @Override
     public void act(World world) {
         move();
+        energy = energy - 5;
         age++;
         eatGrass(location);
         updateEnergy();
 
-        if (energy <= 0) {
+        if (energy <= 0 || age == 20) {
             removeFromRabbitHole();
-            world.delete(this);
             world.setTile(location, null);
             System.out.println("Dyr.Rabbit died at location: " + location);
         }
@@ -89,23 +80,23 @@ public class Rabbit implements Actor {
             moveToBurrow();
         }
 
-        if (homeHole == null && energy >= DIGGING_ENERGY_COST) {
+        if (homeHole == null && energy >= 10) {
             digHole();
         }
     }
 
     private void updateEnergy() {
-        energy -= age / 10;
+        energy -= 2 * age;
 
         if (world.getTile(location) instanceof Grass) {
-            energy += EATING_ENERGY_GAIN;
+            energy += 20;
             world.setTile(location, null);
             System.out.println("Dyr.Rabbit ate grass at location: " + location);
         }
     }
 
     private void reproduce() {
-        if (age > 10 && energy > 50) {
+        if (age > 5 && energy > 30) {
             Location babyLocation = findEmptyAdjacentLocation();
             if (babyLocation != null) {
                 Rabbit baby = new Rabbit(world, babyLocation, program);
@@ -155,6 +146,8 @@ public class Rabbit implements Actor {
                     world.move(this, newLocation);
                     location = newLocation;
 
+                eatGrass(newLocation);
+
                     System.out.println("Dyr.Rabbit moved to location: " + newLocation);
                     return;
                 } catch (IllegalArgumentException e) {
@@ -188,7 +181,7 @@ public class Rabbit implements Actor {
         if (world.getTile(location) == null) {
             homeHole = new RabbitHole(location, new ArrayList<>());
             world.setTile(location, homeHole);
-            energy -= DIGGING_ENERGY_COST;
+            energy -= 10;
             System.out.println("Dyr.Rabbit dug a hole at location: " + location);
         }
     }
@@ -198,8 +191,7 @@ public class Rabbit implements Actor {
 
         if (tileContent instanceof Grass) {
             world.delete(tileContent); // Fjern græsset fra verden
-            world.setTile( location, null);
-            energy += EATING_ENERGY_GAIN; // Kaninen får energi
+            energy += 20; // Kaninen får energi
             System.out.println("Dyr.Rabbit ate grass at location: " + location);
 
             program.setDisplayInformation(Grass.class,null);
