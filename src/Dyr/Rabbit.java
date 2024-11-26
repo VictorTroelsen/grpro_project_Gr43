@@ -1,4 +1,4 @@
-
+package Dyr;
 
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
@@ -43,7 +43,7 @@ public class Rabbit implements Actor {
             if (initialLocation != null && isTileEmptyOrNonBlocking(initialLocation)) {
                 this.location = initialLocation;
                 world.setTile(initialLocation, this);
-                System.out.println("Rabbit placed at location: " + initialLocation);
+                System.out.println("Dyr.Rabbit placed at location: " + initialLocation);
                 return true;
             }
 
@@ -54,12 +54,12 @@ public class Rabbit implements Actor {
             if (isTileEmptyOrNonBlocking(location)) {
                 this.location = location;
                 world.setTile(location, this);
-                System.out.println("Rabbit placed at location: " + location);
+                System.out.println("Dyr.Rabbit placed at location: " + location);
                 return true;
             }
             attempts++;
         }
-        System.out.println("Rabbit could not be placed after " + maxAttempts + " attempts");
+        System.out.println("Dyr.Rabbit could not be placed after " + maxAttempts + " attempts");
         return false;
     }
 
@@ -77,7 +77,7 @@ public class Rabbit implements Actor {
         if (energy <= 0) {
             removeFromRabbitHole();
             world.setTile(location, null);
-            System.out.println("Rabbit died at location: " + location);
+            System.out.println("Dyr.Rabbit died at location: " + location);
         }
 
         reproduce();
@@ -97,7 +97,7 @@ public class Rabbit implements Actor {
         if (world.getTile(location) instanceof Grass) {
             energy += EATING_ENERGY_GAIN;
             world.setTile(location, null);
-            System.out.println("Rabbit ate grass at location: " + location);
+            System.out.println("Dyr.Rabbit ate grass at location: " + location);
         }
     }
 
@@ -106,7 +106,7 @@ public class Rabbit implements Actor {
             Location babyLocation = findEmptyAdjacentLocation();
             if (babyLocation != null) {
                 Rabbit baby = new Rabbit(world, babyLocation, program);
-                System.out.println("Rabbit reproduced at location: " + babyLocation);
+                System.out.println("Dyr.Rabbit reproduced at location: " + babyLocation);
                 energy -= 20;
             }
         }
@@ -126,7 +126,7 @@ public class Rabbit implements Actor {
 
     public void move() {
         if (!world.isOnTile(this)) {
-            System.out.println("Rabbit is not on any tile.");
+            System.out.println("Dyr.Rabbit is not on any tile.");
             return;
         }
 
@@ -142,7 +142,7 @@ public class Rabbit implements Actor {
         }
 
         for (Location newLocation : shuffledTiles) {
-            System.out.println("Rabbit attempting to move from " + location + " to " + newLocation);
+            System.out.println("Dyr.Rabbit attempting to move from " + location + " to " + newLocation);
 
             Object tileContent = world.getTile(newLocation);
 
@@ -154,7 +154,7 @@ public class Rabbit implements Actor {
 
                 eatGrass(newLocation);
 
-                    System.out.println("Rabbit moved to location: " + newLocation);
+                    System.out.println("Dyr.Rabbit moved to location: " + newLocation);
                     return;
                 } catch (IllegalArgumentException e) {
                     System.out.println("Move blocked: " + e.getMessage());
@@ -171,7 +171,7 @@ public class Rabbit implements Actor {
             if(!location.equals(burrowLocation)) {
                 world.move(this, burrowLocation);
                 location = burrowLocation;
-                System.out.println("Rabbit moved to burrow at location: " + burrowLocation);
+                System.out.println("Dyr.Rabbit moved to burrow at location: " + burrowLocation);
             }
         }
     }
@@ -188,7 +188,7 @@ public class Rabbit implements Actor {
             homeHole = new RabbitHole(location, new ArrayList<>());
             world.setTile(location, homeHole);
             energy -= DIGGING_ENERGY_COST;
-            System.out.println("Rabbit dug a hole at location: " + location);
+            System.out.println("Dyr.Rabbit dug a hole at location: " + location);
         }
     }
 
@@ -198,7 +198,7 @@ public class Rabbit implements Actor {
         if (tileContent instanceof Grass) {
             world.delete(tileContent); // Fjern græsset fra verden
             energy += EATING_ENERGY_GAIN; // Kaninen får energi
-            System.out.println("Rabbit ate grass at location: " + location);
+            System.out.println("Dyr.Rabbit ate grass at location: " + location);
 
             program.setDisplayInformation(Grass.class,null);
         }

@@ -6,11 +6,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 import java.awt.Color;
+
+import Dyr.Rabbit;
 import itumulator.executable.DisplayInformation;
 import itumulator.executable.Program;
 import itumulator.world.Location;
 import itumulator.world.World;
-import itumulator.simulator.Actor;
 
 public class FileReaderUtil {
 

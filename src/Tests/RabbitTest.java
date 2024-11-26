@@ -4,7 +4,7 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-// Importer de relevante klasser for at teste Rabbit
+// Importer de relevante klasser for at teste Dyr.Rabbit
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
 import itumulator.world.World;
@@ -14,7 +14,7 @@ public class RabbitTest {
 
     private World world;
     private Location initialLocation;
-    private Rabbit rabbit;
+    private Dyr.Rabbit rabbit;
     private Program program;
 
     @Before
@@ -30,12 +30,12 @@ public class RabbitTest {
         program = new Program(5,1000,100);
 
         // Initialiser kaninen
-        rabbit = new Rabbit(world, initialLocation, program);
+        rabbit = new Dyr.Rabbit(world, initialLocation, program);
     }
 
     @Test
     public void testRabbitPlacement() {
-        assertTrue("Rabbit should be placed in the world", rabbit.isPlaced());
+        assertTrue("Dyr.Rabbit should be placed in the world", rabbit.isPlaced());
     }
 
     @Test
@@ -46,7 +46,7 @@ public class RabbitTest {
         rabbit.eatGrass(grassLocation);
 
         assertNull("Grass should be removed after being eaten", world.getTile(grassLocation));
-        assertEquals("Rabbit should gain energy after eating", 120, rabbit.getEnergy());
+        assertEquals("Dyr.Rabbit should gain energy after eating", 120, rabbit.getEnergy());
     }
 
     @Test
@@ -54,7 +54,7 @@ public class RabbitTest {
         Location emptyLocation = new Location(1, 0);
         rabbit.move();
 
-        assertTrue("Rabbit should have moved to a new location", !rabbit.getLocation().equals(initialLocation));
+        assertTrue("Dyr.Rabbit should have moved to a new location", !rabbit.getLocation().equals(initialLocation));
     }
 
     @Test
@@ -69,7 +69,7 @@ public class RabbitTest {
 
         Object newActor = world.getTile(emptyLocation);
 
-        assertTrue("Rabbit should reproduce if conditions are met", newActor instanceof Rabbit);
+        assertTrue("Dyr.Rabbit should reproduce if conditions are met", newActor instanceof Dyr.Rabbit);
     }
 
     @Test
@@ -79,8 +79,8 @@ public class RabbitTest {
 
         Object tileContent = world.getTile(rabbit.getLocation());
 
-        assertTrue("Rabbit should dig a hole and place it on the current location", tileContent instanceof RabbitHole);
-        assertEquals("Rabbit's energy should decrease after digging", 10, rabbit.getEnergy());
+        assertTrue("Dyr.Rabbit should dig a hole and place it on the current location", tileContent instanceof RabbitHole);
+        assertEquals("Dyr.Rabbit's energy should decrease after digging", 10, rabbit.getEnergy());
     }
 }
 

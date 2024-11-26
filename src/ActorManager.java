@@ -1,7 +1,7 @@
 
 
+import Dyr.Rabbit;
 import itumulator.simulator.Actor;
-import itumulator.simulator.Simulator;
 import itumulator.world.Location;
 import itumulator.world.World;
 import itumulator.executable.Program;

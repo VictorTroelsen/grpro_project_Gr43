@@ -1,6 +1,6 @@
+import Dyr.Rabbit;
 import itumulator.world.Location;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class RabbitHole {
