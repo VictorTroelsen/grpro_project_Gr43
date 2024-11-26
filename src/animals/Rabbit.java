@@ -1,10 +1,12 @@
 package animals;
 
+import actions.RabbitHole;
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
 import itumulator.world.NonBlocking;
 import itumulator.world.World;
 import itumulator.executable.Program;
+import biodiversity.Grass;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -76,6 +78,7 @@ public class Rabbit implements Actor {
 
         if (energy <= 0) {
             removeFromRabbitHole();
+            world.delete(this);
             world.setTile(location, null);
             System.out.println("Dyr.Rabbit died at location: " + location);
         }
@@ -102,7 +105,7 @@ public class Rabbit implements Actor {
     }
 
     private void reproduce() {
-        if (age > 5 && energy > 30) {
+        if (age > 10 && energy > 50) {
             Location babyLocation = findEmptyAdjacentLocation();
             if (babyLocation != null) {
                 Rabbit baby = new Rabbit(world, babyLocation, program);
@@ -152,8 +155,6 @@ public class Rabbit implements Actor {
                     world.move(this, newLocation);
                     location = newLocation;
 
-                eatGrass(newLocation);
-
                     System.out.println("Dyr.Rabbit moved to location: " + newLocation);
                     return;
                 } catch (IllegalArgumentException e) {
@@ -197,6 +198,7 @@ public class Rabbit implements Actor {
 
         if (tileContent instanceof Grass) {
             world.delete(tileContent); // Fjern græsset fra verden
+            world.setTile( location, null);
             energy += EATING_ENERGY_GAIN; // Kaninen får energi
             System.out.println("Dyr.Rabbit ate grass at location: " + location);
 
