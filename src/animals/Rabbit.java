@@ -2,12 +2,14 @@ package animals;
 
 import actions.RabbitHole;
 import biodiversity.Grass;
+import itumulator.executable.DisplayInformation;
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
 import itumulator.world.NonBlocking;
 import itumulator.world.World;
 import itumulator.executable.Program;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Set;
@@ -63,26 +65,26 @@ public class Rabbit extends Animal {//implements Actor {
     @Override
     public void act(World world) {
         move();
-        energy = energy - 5;
+        energy -= 5;
         age++;
         eatGrass(location);
         updateEnergy();
 
-        if (energy <= 0 || age == 20) {
-            removeFromRabbitHole();
-            world.setTile(location, null);
-            System.out.println("Dyr.Rabbit died at location: " + location);
+        /*if (energy <= 0 || age == 20) {
+            dies();
         }
 
-        reproduce();
+        reproduce();*/
+
+        if (homeHole == null && energy >= 10) {
+            digHole();
+        }
 
         if(world.isNight()) {
             moveToBurrow();
         }
 
-        if (homeHole == null && energy >= 10) {
-            digHole();
-        }
+
     }
 
     private void updateEnergy() {
@@ -96,7 +98,7 @@ public class Rabbit extends Animal {//implements Actor {
     }
 
     private void reproduce() {
-        if (age > 5 && energy > 30) {
+        if (age > 5 && energy > 50) {
             Location babyLocation = findEmptyAdjacentLocation();
             if (babyLocation != null) {
                 Rabbit baby = new Rabbit(world, babyLocation, program);
@@ -143,10 +145,10 @@ public class Rabbit extends Animal {//implements Actor {
             if (tileContent == null || tileContent instanceof NonBlocking) {
                 System.out.println("Move valid, proceeding...");
                 try {
+
                     world.move(this, newLocation);
                     location = newLocation;
 
-                eatGrass(newLocation);
 
                     System.out.println("Dyr.Rabbit moved to location: " + newLocation);
                     return;
@@ -178,23 +180,43 @@ public class Rabbit extends Animal {//implements Actor {
     }
 
     private void digHole() {
-        if (world.getTile(location) == null) {
-            homeHole = new RabbitHole(location, new ArrayList<>());
-            world.setTile(location, homeHole);
-            energy -= 10;
-            System.out.println("Dyr.Rabbit dug a hole at location: " + location);
+        if (world.isDay() && homeHole == null && energy >= 10) {
+            Set<Location> surroundingTiles = world.getSurroundingTiles(location);
+
+            for (Location loc : surroundingTiles) {
+                if (world.getTile(loc) == null) {
+                    homeHole = new RabbitHole(loc, new ArrayList<>());
+                    homeHole.addRabbit(this); // Tilføj kaninen til rabbit hole
+                    world.setTile(loc, homeHole);
+
+                    // Setup display information for rabbit hole
+                    DisplayInformation displayInformation = new DisplayInformation(Color.GRAY, "hole-small");
+                    // Assuming there's a method to set display information, you might need to adjust this as per your actual setup.
+                    program.setDisplayInformation(RabbitHole.class, displayInformation);
+
+                    energy -= 10;
+                    System.out.println("Dyr.Rabbit dug a new hole at location: " + loc);
+                    break;
+                }
+            }
+
+            if (homeHole == null) {
+                System.out.println("Dyr.Rabbit could not find a nearby location to dig a hole.");
+            }
         }
     }
 
     private void eatGrass(Location location) {
-        Object tileContent = world.getTile(location);
+        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
 
-        if (tileContent instanceof Grass) {
-            world.delete(tileContent); // Fjern græsset fra verden
-            energy += 20; // Kaninen får energi
-            System.out.println("Dyr.Rabbit ate grass at location: " + location);
-
-            program.setDisplayInformation(Grass.class,null);
+        for (Location loc : surroundingTiles) {
+            Object tileContent = world.getNonBlocking(loc);
+            if (tileContent instanceof Grass) {
+                energy += 30; // Kaninen får energi
+                System.out.println("Dyr.Rabbit ate grass at location: " + location);
+                world.delete(tileContent); // Fjern græsset fra verden
+                break;
+            }
         }
     }
 
