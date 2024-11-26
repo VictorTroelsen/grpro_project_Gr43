@@ -17,6 +17,7 @@ import java.util.Set;
 public class Rabbit extends Animal {//implements Actor {
 
     private RabbitHole homeHole;
+    private static final int MAX_ACCEPTABLE_DISTANCE = 10;
 
     public Rabbit(World world, Location initialLocation, Program program) {
         super(world, initialLocation, program);
@@ -76,15 +77,15 @@ public class Rabbit extends Animal {//implements Actor {
 
         reproduce();*/
 
-        if (homeHole == null && energy >= 10) {
+        if (homeHole == null && energy >= 20) {
             digHole();
         }
 
         if(world.isNight()) {
-            moveToBurrow();
+            if (!moveToBurrow()) {
+                sleepOutside();
+            }
         }
-
-
     }
 
     private void updateEnergy() {
@@ -161,15 +162,35 @@ public class Rabbit extends Animal {//implements Actor {
         }
     }
 
-    private void moveToBurrow() {
+    private boolean moveToBurrow() {
         if (homeHole != null) {
             Location burrowLocation = homeHole.getLocation();
-            if(!location.equals(burrowLocation)) {
-                world.move(this, burrowLocation);
-                location = burrowLocation;
-                System.out.println("Dyr.Rabbit moved to burrow at location: " + burrowLocation);
+            if (!location.equals(burrowLocation)) {
+                Set<Location> pathToBurrow = homeHole.getPath(world, location, burrowLocation);
+                if(pathToBurrow != null && pathToBurrow.size() <= MAX_ACCEPTABLE_DISTANCE) {
+                    world.move(this, burrowLocation);
+                    location = burrowLocation;
+                    program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small-sleeping"));
+                    System.out.println("Dyr.Rabbit moved to burrow at location: " + burrowLocation);
+                    return true;
+                } else {
+                    System.out.println("Dyr.Rabbit could not find a path to the burrow and will sleep outside.");
+                    return false;
+                }
+            } else {
+                program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small-sleeping"));
+                System.out.println("Dyr.Rabbit is already in the burrow.");
+                return true;
             }
         }
+        return false;
+    }
+
+
+
+    private void sleepOutside() {
+        program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small-sleeping"));
+        System.out.println("Dyr.Rabbit is sleeping outside at location: " + location);
     }
 
     private void removeFromRabbitHole() {
