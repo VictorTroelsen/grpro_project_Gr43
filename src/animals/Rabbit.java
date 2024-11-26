@@ -25,10 +25,6 @@ public class Rabbit extends Animal {//implements Actor {
         this.isPlaced = placeRabbit(initialLocation);
     }
 
-    private int initialEnergy() {
-        return 100 - age;
-    }
-
     private boolean placeRabbit(Location initialLocation) {
         int attempts = 0;
         int maxAttempts = 2; //world.getSize() * world.getSize();
@@ -55,34 +51,28 @@ public class Rabbit extends Animal {//implements Actor {
             attempts++;
         }
         System.out.println("Dyr.Rabbit could not be placed after " + maxAttempts + " attempts");
-        return false;
-    }
 
-    public boolean isPlaced() {
-        return isPlaced;
-    }
+            return false;
 
+    }
     @Override
     public void act(World world) {
-        move();
-        energy -= 5;
+        super.move();
         age++;
         eatGrass(location);
-        updateEnergy();
-
-        /*if (energy <= 0 || age == 20) {
-            dies();
+        if (energy <= 0 || age == 20) {
+            super.dies();
         }
 
-        reproduce();*/
+        reproduce();
 
         if (homeHole == null && energy >= 10) {
             digHole();
         }
 
-        if(world.isNight()) {
+        /*if(world.isNight()) {
             moveToBurrow();
-        }
+        }*/
 
 
     }
@@ -98,7 +88,7 @@ public class Rabbit extends Animal {//implements Actor {
     }
 
     private void reproduce() {
-        if (age > 5 && energy > 50) {
+        if (age > 15 && energy > 80) {
             Location babyLocation = findEmptyAdjacentLocation();
             if (babyLocation != null) {
                 Rabbit baby = new Rabbit(world, babyLocation, program);
@@ -116,49 +106,6 @@ public class Rabbit extends Animal {//implements Actor {
             }
         }
         return null;
-    }
-
-
-
-    public void move() {
-        if (!world.isOnTile(this)) {
-            System.out.println("Dyr.Rabbit is not on any tile.");
-            return;
-        }
-
-        Random random = new Random();
-        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
-        Location[] shuffledTiles = surroundingTiles.toArray(new Location[0]);
-
-        for(int i = 0; i < shuffledTiles.length; i++) {
-            int randomIndex = random.nextInt(shuffledTiles.length);
-            Location temp = shuffledTiles[i];
-            shuffledTiles[i] = shuffledTiles[randomIndex];
-            shuffledTiles[randomIndex] = temp;
-        }
-
-        for (Location newLocation : shuffledTiles) {
-            System.out.println("Dyr.Rabbit attempting to move from " + location + " to " + newLocation);
-
-            Object tileContent = world.getTile(newLocation);
-
-            if (tileContent == null || tileContent instanceof NonBlocking) {
-                System.out.println("Move valid, proceeding...");
-                try {
-
-                    world.move(this, newLocation);
-                    location = newLocation;
-
-
-                    System.out.println("Dyr.Rabbit moved to location: " + newLocation);
-                    return;
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Move blocked: " + e.getMessage());
-                }
-            } else {
-                System.out.println("Move blocked: Location is occupied or the same as the current location.");
-            }
-        }
     }
 
     private void moveToBurrow() {
@@ -219,14 +166,4 @@ public class Rabbit extends Animal {//implements Actor {
             }
         }
     }
-
-    private boolean isTileEmptyOrNonBlocking(Location location) {
-        Object tile = world.getTile(location);
-        return tile == null || tile instanceof NonBlocking;
-    }
-
-    public int getEnergy() { return energy; }
-
-    public Object getLocation() { return location; }
-
 }

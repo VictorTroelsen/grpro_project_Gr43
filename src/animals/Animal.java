@@ -7,10 +7,11 @@ import itumulator.world.NonBlocking;
 import itumulator.world.World;
 
 import java.util.Random;
+import java.util.Set;
 
 public class Animal implements Actor {
     Location location;
-    World world;
+    static World world;
     int energy;
     int age;
     boolean isPlaced;
@@ -20,21 +21,18 @@ public class Animal implements Actor {
         this.world = world;
         this.energy = 100;
         this.age = 0;
-        this.isPlaced = placeAnimal(initialLocation);
         this.program = program;
     }
-
-    private boolean placeAnimal(Location initialLocation) {
-        int attempts = 0;
-        int maxAttempts = 2;
-        Random random = new Random();
-        return false;
+    private int initialEnergy() {
+        return 100 - age;
     }
+
+
     public boolean isPlaced() {
         return isPlaced;
     }
 
-    private boolean isTileEmptyOrNonBlocking(Location location) {
+    boolean isTileEmptyOrNonBlocking(Location location) {
         Object tile = world.getTile(location);
         return tile == null || tile instanceof NonBlocking;
     }
@@ -45,6 +43,61 @@ public class Animal implements Actor {
      */
     @Override
     public void act(World world) {
-
+        move();
+        energy -= 5;
+        updateEnergy();
     }
+
+    private void updateEnergy() {
+        energy -= 2 * age;
+    }
+
+    protected void dies() {
+        world.delete(this);
+    }
+
+    public void move() {
+        if (!world.isOnTile(this)) {
+            System.out.println("Dyr.Rabbit is not on any tile.");
+            return;
+        }
+
+        Random random = new Random();
+        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
+        Location[] shuffledTiles = surroundingTiles.toArray(new Location[0]);
+
+        for(int i = 0; i < shuffledTiles.length; i++) {
+            int randomIndex = random.nextInt(shuffledTiles.length);
+            Location temp = shuffledTiles[i];
+            shuffledTiles[i] = shuffledTiles[randomIndex];
+            shuffledTiles[randomIndex] = temp;
+        }
+
+        for (Location newLocation : shuffledTiles) {
+            System.out.println("Dyr.Rabbit attempting to move from " + location + " to " + newLocation);
+
+            Object tileContent = world.getTile(newLocation);
+
+            if (tileContent == null || tileContent instanceof NonBlocking) {
+                System.out.println("Move valid, proceeding...");
+                try {
+
+                    world.move(this, newLocation);
+                    location = newLocation;
+
+
+                    System.out.println("Dyr.Rabbit moved to location: " + newLocation);
+                    return;
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Move blocked: " + e.getMessage());
+                }
+            } else {
+                System.out.println("Move blocked: Location is occupied or the same as the current location.");
+            }
+        }
+    }
+    public int getEnergy() { return energy; }
+
+    public Object getLocation() { return location; }
+
 }
