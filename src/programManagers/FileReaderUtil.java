@@ -1,3 +1,5 @@
+package programManagers;
+
 import java.nio.file.Path;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -7,7 +9,9 @@ import java.io.IOException;
 import java.util.*;
 import java.awt.Color;
 
-import Dyr.Rabbit;
+import animals.Rabbit;
+import actions.RabbitHole;
+import biodiversity.Grass;
 import itumulator.executable.DisplayInformation;
 import itumulator.executable.Program;
 import itumulator.world.Location;

@@ -1,4 +1,4 @@
-package Dyr;
+package animals;
 
 import itumulator.simulator.Actor;
 import itumulator.world.Location;

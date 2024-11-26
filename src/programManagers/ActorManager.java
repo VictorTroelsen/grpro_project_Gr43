@@ -1,6 +1,6 @@
+package programManagers;
 
-
-import Dyr.Rabbit;
+import animals.Rabbit;
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
 import itumulator.world.World;

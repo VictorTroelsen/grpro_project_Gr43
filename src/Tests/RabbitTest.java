@@ -41,11 +41,11 @@ public class RabbitTest {
     @Test
     public void testEatGrass() {
         Location grassLocation = new Location(1, 1);
-        world.setTile(grassLocation, new Grass(grassLocation));
+        world.setTile(grassLocation, new biodiversity.Grass(grassLocation));
 
         rabbit.eatGrass(grassLocation);
 
-        assertNull("Grass should be removed after being eaten", world.getTile(grassLocation));
+        assertNull("biodiversity.Grass should be removed after being eaten", world.getTile(grassLocation));
         assertEquals("Dyr.Rabbit should gain energy after eating", 120, rabbit.getEnergy());
     }
 
@@ -79,7 +79,7 @@ public class RabbitTest {
 
         Object tileContent = world.getTile(rabbit.getLocation());
 
-        assertTrue("Dyr.Rabbit should dig a hole and place it on the current location", tileContent instanceof RabbitHole);
+        assertTrue("Dyr.Rabbit should dig a hole and place it on the current location", tileContent instanceof actions.RabbitHole);
         assertEquals("Dyr.Rabbit's energy should decrease after digging", 10, rabbit.getEnergy());
     }
 }

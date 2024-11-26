@@ -1,4 +1,6 @@
-import Dyr.Rabbit;
+package actions;
+
+import animals.Rabbit;
 import itumulator.world.Location;
 
 import java.util.List;

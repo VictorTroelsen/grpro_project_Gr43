@@ -1,3 +1,5 @@
+package biodiversity;
+
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
 import itumulator.world.NonBlocking;
@@ -5,7 +7,6 @@ import itumulator.world.World;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.Random;
 
 public class Grass implements NonBlocking, Actor {
@@ -65,7 +66,7 @@ public void spread(World world) {
         Location newLocation = potentialLocations.get(random.nextInt(potentialLocations.size()));
         Grass newGrass = new Grass(newLocation);
         world.setTile(newLocation, newGrass);
-        System.out.printf("New Grass planted at location (%d, %d)\n", newLocation.getX(), newLocation.getY());
+        System.out.printf("New biodiversity.Grass planted at location (%d, %d)\n", newLocation.getX(), newLocation.getY());
     }
     //System.out.printf("Potential locations found: %d\n", potentialLocations.size());
 
@@ -79,9 +80,9 @@ public void spread(World world) {
       //  System.out.printf("Potential locations available: %d\n", filteredLocations.size());
         //int randomIndex = (int) (Math.random() * filteredLocations.size());
         //Location newLocation = filteredLocations.get(randomIndex);
-        //Grass newGrass = new Grass(newLocation);
+        //biodiversity.Grass newGrass = new biodiversity.Grass(newLocation);
         //world.setTile(newLocation, newGrass);
-        //System.out.printf("New Grass planted at location (%d, %d)\n", newLocation.getX(), newLocation.getY());
+        //System.out.printf("New biodiversity.Grass planted at location (%d, %d)\n", newLocation.getX(), newLocation.getY());
     //} else {
      //   System.out.println("No suitable location found for spreading.");
     //}
