@@ -1,23 +1,43 @@
-import java.awt.Color;
-
-import itumulator.executable.DisplayInformation;
 import itumulator.executable.Program;
-import itumulator.world.Location;
-import itumulator.world.World;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.io.IOException;
 
 public class Main {
 
     public static void main(String[] args) {
-        int size = 5;
-        int display_size = 800;
-        int delay = 75;
-        Program p = new Program(size, display_size, delay);
-        World w = p.getWorld();
+        String directoryPath = "week-1";
+        String specificFileName = "t1-1c.txt";
 
-        // w.setTile(new Location(0, 0), new <MyClass>());
+        try {
+            List<Path> txtFiles = FileReaderUtil.getTxtFilesFromDirectory(directoryPath);
 
-        // p.setDisplayInformation(<MyClass>.class, new DisplayInformation(<Color>, "<ImageName>"));
+            if (!txtFiles.isEmpty()) {
+                Path selectedFile = null;
+                for (Path file : txtFiles) {
+                    if (file.getFileName().toString().equals(specificFileName)) {
+                        selectedFile = file;
+                        break;
+                    }
+                }
 
-        p.show();
+                if (selectedFile != null) {
+                    Program p = FileReaderUtil.readFile(selectedFile);
+
+                    if (p != null) {
+                        p.show();
+                    } else {
+                        System.err.println("Could not initialize the program correctly from the file.");
+                    }
+                } else {
+                    System.err.println("File " + specificFileName + " not found in folder: " + directoryPath);
+                }
+            } else {
+                System.err.println("No .txt files found in folder: " + directoryPath);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading files: " + e.getMessage());
+        }
     }
 }
