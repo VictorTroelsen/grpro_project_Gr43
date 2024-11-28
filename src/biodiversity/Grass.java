@@ -27,7 +27,6 @@ public void spread(World world) {
     double spreadProbability = 0.1; // 10% chance to spread
 
     if (random.nextDouble() > spreadProbability) {
-        System.out.println("Skipping spread this time due to probability.");
         return;
     }
 
@@ -38,6 +37,7 @@ public void spread(World world) {
 
     // Find alle nærliggende tiles
     //System.out.printf("Current location (%d, %d)\n", x, y);
+    if(world.isDay()){
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             //System.out.printf("dx: %d, dy: %d\n", dx, dy);
@@ -61,12 +61,13 @@ public void spread(World world) {
             }
         }
     }
+    }
 
     if (!potentialLocations.isEmpty()) {
         Location newLocation = potentialLocations.get(random.nextInt(potentialLocations.size()));
         Grass newGrass = new Grass(newLocation);
         world.setTile(newLocation, newGrass);
-        System.out.printf("New biodiversity.Grass planted at location (%d, %d)\n", newLocation.getX(), newLocation.getY());
+        //System.out.printf("New biodiversity.Grass planted at location (%d, %d)\n", newLocation.getX(), newLocation.getY());
     }
     //System.out.printf("Potential locations found: %d\n", potentialLocations.size());
 

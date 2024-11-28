@@ -3,7 +3,6 @@ package animals;
 import actions.RabbitHole;
 import biodiversity.Grass;
 import itumulator.executable.DisplayInformation;
-import itumulator.simulator.Actor;
 import itumulator.world.Location;
 import itumulator.world.NonBlocking;
 import itumulator.world.World;
@@ -11,6 +10,7 @@ import itumulator.executable.Program;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
@@ -18,6 +18,7 @@ public class Rabbit extends Animal {//implements Actor {
 
     private RabbitHole homeHole;
     private static final int MAX_ACCEPTABLE_DISTANCE = 10;
+    private static Set<Rabbit> rabbitsInBurrow = new HashSet<>();
 
     public Rabbit(World world, Location initialLocation, Program program) {
         super(world, initialLocation, program);
@@ -30,71 +31,65 @@ public class Rabbit extends Animal {//implements Actor {
         return 100 - age;
     }
 
-    private boolean placeRabbit(Location initialLocation) {
-        int attempts = 0;
-        int maxAttempts = 2; //world.getSize() * world.getSize();
-        Random random = new Random();
+    @Override
+    public void act(World world) {
+        if(world.isNight()) {
+            moveToBurrow();
+        } else {
+            leaveBurrow();
 
-        while (attempts < maxAttempts) {
-            if (initialLocation != null && isTileEmptyOrNonBlocking(initialLocation)) {
-                this.location = initialLocation;
-                world.setTile(initialLocation, this);
-                System.out.println("Dyr.Rabbit placed at location: " + initialLocation);
-                return true;
+            move();
+            energy -= 5;
+            age++;
+            if (energy <= 60) {
+                eatGrass(location);
             }
+            updateEnergyRabbit();
 
-            int x = random.nextInt(world.getSize());
-            int y = random.nextInt(world.getSize());
-            Location location = new Location(x, y);
-
-            if (isTileEmptyOrNonBlocking(location)) {
-                this.location = location;
-                world.setTile(location, this);
-                System.out.println("Dyr.Rabbit placed at location: " + location);
-                return true;
-            }
-            attempts++;
+        if (energy <= 0 || age == 20) {
+            dies();
         }
-        System.out.println("Dyr.Rabbit could not be placed after " + maxAttempts + " attempts");
-        return false;
+
+            reproduce();
+
+            if (homeHole == null && energy >= 20) {
+                digHole();
+            }
+            sleepOutside();
+        }
     }
 
     public boolean isPlaced() {
         return isPlaced;
     }
 
-    @Override
-    public void act(World world) {
-        move();
-        energy -= 5;
-        age++;
-        eatGrass(location);
-        updateEnergy();
 
-        /*if (energy <= 0 || age == 20) {
-            dies();
-        }
 
-        reproduce();*/
-
-        if (homeHole == null && energy >= 20) {
-            digHole();
-        }
-
-        if(world.isNight()) {
-            if (!moveToBurrow()) {
-                sleepOutside();
-            }
-        }
-    }
-
-    private void updateEnergy() {
+    private void updateEnergyRabbit() {
         energy -= 2 * age;
 
         if (world.getTile(location) instanceof Grass) {
             energy += 20;
             world.setTile(location, null);
             System.out.println("Dyr.Rabbit ate grass at location: " + location);
+        }
+
+        checkAndUpdateLocation();
+    }
+
+    private void checkAndUpdateLocation() {
+        if(world.getEntities().containsKey(this)) {
+            Location entityLocation = world.getEntities().get(this);
+            if (entityLocation != null && !entityLocation.equals(this.location)) {
+                throw new IllegalStateException("Kaninen prøver at sætte sig på en position, hvor den allerede er.");
+            }
+        } else {
+            if (world.getTile(this.location) == null) {
+                world.getEntities().put(this, this.location);
+                world.setTile(this.location, this);
+            } else {
+                throw new IllegalArgumentException("Entity already exists in the world.");
+            }
         }
     }
 
@@ -104,7 +99,7 @@ public class Rabbit extends Animal {//implements Actor {
             if (babyLocation != null) {
                 Rabbit baby = new Rabbit(world, babyLocation, program);
                 System.out.println("Dyr.Rabbit reproduced at location: " + babyLocation);
-                energy -= 20;
+                energy -= 15;
             }
         }
     }
@@ -162,28 +157,30 @@ public class Rabbit extends Animal {//implements Actor {
         }
     }
 
-    private boolean moveToBurrow() {
+    private void moveToBurrow() {
         if (homeHole != null) {
             Location burrowLocation = homeHole.getLocation();
             if (!location.equals(burrowLocation)) {
                 Set<Location> pathToBurrow = homeHole.getPath(world, location, burrowLocation);
                 if(pathToBurrow != null && pathToBurrow.size() <= MAX_ACCEPTABLE_DISTANCE) {
-                    world.move(this, burrowLocation);
-                    location = burrowLocation;
-                    program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small-sleeping"));
-                    System.out.println("Dyr.Rabbit moved to burrow at location: " + burrowLocation);
-                    return true;
-                } else {
-                    System.out.println("Dyr.Rabbit could not find a path to the burrow and will sleep outside.");
-                    return false;
+                    try {
+                        world.move(this, burrowLocation);
+                        location = burrowLocation;
+
+                        rabbitsInBurrow.add(this);
+                        world.remove(this);
+
+                        program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small-sleeping"));
+
+
+                        System.out.println("Dyr.Rabbit moved to burrow at location: " + burrowLocation);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Move to burrow failed: " + e.getMessage());
+                        sleepOutside();
+                    }
                 }
-            } else {
-                program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small-sleeping"));
-                System.out.println("Dyr.Rabbit is already in the burrow.");
-                return true;
             }
         }
-        return false;
     }
 
 
@@ -193,10 +190,23 @@ public class Rabbit extends Animal {//implements Actor {
         System.out.println("Dyr.Rabbit is sleeping outside at location: " + location);
     }
 
-    private void removeFromRabbitHole() {
-        Object tileContent = world.getTile(location);
-        if (tileContent instanceof RabbitHole) {
-            ((RabbitHole) tileContent).removeRabbit(this);
+    private void leaveBurrow() {
+        if (rabbitsInBurrow.contains(this)) {
+            try {
+                Location exitLocation = homeHole.getLocation();
+                world.setTile(exitLocation, this);   // Placer kaninen tilbage på kortet
+                location = exitLocation;
+
+                // Fjern kaninen fra burrow track
+                rabbitsInBurrow.remove(this);
+
+                program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small"));
+
+
+                System.out.println("Dyr.Rabbit left burrow and moved to location: " + exitLocation);
+            } catch (IllegalArgumentException e) {
+                System.out.println("Leaving burrow failed: " + e.getMessage());
+            }
         }
     }
 
@@ -240,14 +250,4 @@ public class Rabbit extends Animal {//implements Actor {
             }
         }
     }
-
-    private boolean isTileEmptyOrNonBlocking(Location location) {
-        Object tile = world.getTile(location);
-        return tile == null || tile instanceof NonBlocking;
-    }
-
-    public int getEnergy() { return energy; }
-
-    public Object getLocation() { return location; }
-
 }

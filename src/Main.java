@@ -8,8 +8,8 @@ import java.io.IOException;
 public class Main {
 
     public static void main(String[] args) {
-        String directoryPath = "week-1";
-        String specificFileName = "t1-1c.txt";
+        String directoryPath = "week-2";
+        String specificFileName = "t2-4a.txt";
 
         try {
             List<Path> txtFiles = FileReaderUtil.getTxtFilesFromDirectory(directoryPath);

@@ -7,7 +7,7 @@ import itumulator.world.World;
 
 import java.util.*;
 
-public class RabbitHole {
+public class RabbitHole implements NonBlocking {
     private Location location;
     private List<Rabbit> connectedRabbits;
 
@@ -53,6 +53,8 @@ public class RabbitHole {
                 }
             }
         }
+        path.add(start);
+        path.add(end);
         return path;
     }
 

@@ -48,17 +48,24 @@ public class Animal implements Actor {
         updateEnergy();
     }
 
-    private void updateEnergy() {
+    void updateEnergy() {
         energy -= 2 * age;
     }
 
-    protected void dies() {
-        world.delete(this);
+
+    Location findEmptyAdjacentLocation() {
+        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
+        for (Location loc : surroundingTiles) {
+            if (isTileEmptyOrNonBlocking(loc)) {
+                return loc;
+            }
+        }
+        return null;
     }
 
     public void move() {
         if (!world.isOnTile(this)) {
-            System.out.println("Dyr.Rabbit is not on any tile.");
+            System.out.println(Animal + " is not on any tile.");
             return;
         }
 
@@ -74,7 +81,7 @@ public class Animal implements Actor {
         }
 
         for (Location newLocation : shuffledTiles) {
-            System.out.println("Dyr.Rabbit attempting to move from " + location + " to " + newLocation);
+            System.out.println(Animal + " attempting to move from " + location + " to " + newLocation);
 
             Object tileContent = world.getTile(newLocation);
 
@@ -86,7 +93,7 @@ public class Animal implements Actor {
                     location = newLocation;
 
 
-                    System.out.println("Dyr.Rabbit moved to location: " + newLocation);
+                    System.out.println(Animal + " moved to location: " + newLocation);
                     return;
                 } catch (IllegalArgumentException e) {
                     System.out.println("Move blocked: " + e.getMessage());

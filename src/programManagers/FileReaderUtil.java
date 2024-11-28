@@ -9,8 +9,12 @@ import java.io.IOException;
 import java.util.*;
 import java.awt.Color;
 
+
+import animals.Bear;
+import animals.Wolf;
 import animals.Rabbit;
 import actions.RabbitHole;
+import biodiversity.Bush;
 import biodiversity.Grass;
 import itumulator.executable.DisplayInformation;
 import itumulator.executable.Program;
@@ -49,19 +53,46 @@ public class FileReaderUtil {
             p.setDisplayInformation(Grass.class, new DisplayInformation(Color.GREEN, "grass"));
             p.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY, "rabbit-small"));
             p.setDisplayInformation(RabbitHole.class, new DisplayInformation(Color.RED, "hole-small"));
+            p.setDisplayInformation(Bear.class, new DisplayInformation(Color.CYAN, "bear"));
+            p.setDisplayInformation(Wolf.class, new DisplayInformation(Color.BLUE, "wolf"));
+            p.setDisplayInformation(Bush.class, new DisplayInformation(Color.PINK, "bush-berries"));
 
             logWorldState(w, "Initial world state");
 
-            int rabbitCount = 0;
+            //int rabbitCount = 0;
 
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split("\\s+");
-                System.out.println("Processing line: " + line);
-
                 if (parts.length == 2) {
                     String type = parts[0];
-                    String value = parts[1];
+                    try {
+                        if (parts[1].contains("-")) {
+                            String[] range = parts[1].split("-");
+                            int minValue = Integer.parseInt(range[0]);
+                            int maxValue = Integer.parseInt(range[1]);
+                            int count = minValue + new Random().nextInt(maxValue - minValue + 1);
+                            addElementsToWorld(type, count, p);
+                        } else {
+                            System.err.println("Invalid line in file " + path + ": " + line);
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("Invalid number format in line: " + line);
+                    }
+                } else {
+                    System.err.println("Invalid line format in file " + path + ": " + line);
+                }
 
+
+
+                String type = parts[0];
+                if (parts.length > 2 && parts[2].matches("\\(\\d+,\\)")) {
+                    String[] coords = parts[2].replaceAll("[()]", "").split(",");
+                    int x = Integer.parseInt(coords[0]);
+                    int y = Integer.parseInt(coords[1]);
+                    addElementsToWorld(type, 1, p, x, y);
+
+                } else {
+                    String value = parts[1];
                     if (value.contains("-")) {
                         String[] range = value.split("-");
                         int minValue = Integer.parseInt(range[0]);
@@ -69,23 +100,11 @@ public class FileReaderUtil {
                         int count = minValue + new Random().nextInt(maxValue - minValue + 1);
                         addElementsToWorld(type, count, p);
                     } else {
-
                         int count = Integer.parseInt(value);
-                        System.out.println("Found " + type + " with count " + count);
-
-                        if (type.equalsIgnoreCase("rabbit")) {
-                            rabbitCount = Math.min(count, worldSize * worldSize);
-                        } else {
-                            addElementsToWorld(type, count, p);
-                        }
+                        addElementsToWorld(type, count, p);
                     }
-                } else {
-                    System.err.println("Invalid line in file " + path + ": " + line);
                 }
             }
-
-            System.out.println("Adding a total of " + rabbitCount + " rabbits to the world.");
-            addElementsToWorld("rabbit", rabbitCount, p);
         } catch (IOException e) {
             System.err.println("Error reading file: " + path + ": " + e.getMessage());
         }
@@ -93,18 +112,22 @@ public class FileReaderUtil {
     }
 
     private static void addElementsToWorld(String type, int count, Program p) {
+        addElementsToWorld(type, count, p, -1, -1); // Call the coordinates method with default non-used values
+    }
+
+    private static void addElementsToWorld(String type, int count, Program p, int specificX, int specificY) {
         ActorManager actorManager = new ActorManager(p);
         World w = p.getWorld();
         Random random = new Random();
-        Program program = new Program(w.getSize(), 800, 100);
+        //Program program = new Program(w.getSize(), 800, 100);
 
         int addedCount = 0;
         int attempts = 0;
         int maxAttempts = w.getSize() * w.getSize();
 
         while (addedCount < count && attempts < maxAttempts) {
-            int x = random.nextInt(w.getSize());
-            int y = random.nextInt(w.getSize());
+            int x = specificX >= 0 ? specificX : random.nextInt(w.getSize());
+            int y = specificY >= 0 ? specificY : random.nextInt(w.getSize());
             Location location = new Location(x, y);
 
             if (w.getTile(location) == null) {
@@ -116,7 +139,7 @@ public class FileReaderUtil {
                             addedCount++;
                             break;
                         case "rabbit":
-                            Rabbit rabbit = new Rabbit(w, location, program);
+                            Rabbit rabbit = new Rabbit(w, location, p);
                             if (rabbit.isPlaced()) {
                                 addedCount++;
                             }
@@ -127,6 +150,25 @@ public class FileReaderUtil {
                             w.setTile(location, rabbitHole);
                             addedCount++;
                             break;
+                        case "berry":
+                            Bush bush = new Bush(location);
+                            actorManager.addActor(bush, location);
+                            addedCount++;
+                            break;
+                        case "bear":
+                            Bear bear = new Bear(w, location, p);
+                            actorManager.addActor(bear, location);
+                            if(bear.isPlaced()) {}
+                            addedCount++;
+                            break;
+                        case "wolf":
+                            Wolf wolf = new Wolf(w,location,p);
+                            actorManager.addActor(wolf, location);
+                            if (wolf.isPlaced()) {
+                                addedCount++;
+                            }
+                            break;
+                                
                         default:
                             System.err.println("Unknown type: " + type);
                     }
