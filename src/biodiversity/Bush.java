@@ -2,57 +2,57 @@ package biodiversity;
 
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
-import itumulator.world.NonBlocking;
 import itumulator.world.World;
-import itumulator.executable.DisplayInformation;
-import itumulator.executable.Program;
 
-import java.awt.Color;
 import java.util.Random;
 
-public class Bush implements NonBlocking, Actor {
-    private final Location location;
+public class Bush implements Actor {
+    private Location location;
+    private World world;
+    private int berries; // Antallet af bær busken har
+    private static final int MAX_BERRIES = 10; // Maksimalt antal bær busken kan have
+    private static final int BERRY_REGEN_RATE = 1; // Antal bær, der regenereres per trin
 
-    public Bush(Location location) {
-        this.location = location;
+    public Bush(World world, Location initialLocation) {
+        this.world = world;
+        this.location = initialLocation;
+        this.berries = new Random().nextInt(MAX_BERRIES) + 1; // Start med et tilfældigt antal bær
+        placeBush(initialLocation);
+    }
+
+    private void placeBush(Location location) {
+        if (world.getTile(location) == null) {
+            world.setTile(location, this);
+            System.out.println("Bush placed at: " + location + " with " + berries + " berries.");
+        } else {
+            System.out.println("Cannot place bush at: " + location + ". Tile is occupied.");
+        }
+    }
+
+    public int pickBerries(int amount) {
+        int berriesPicked = Math.min(amount, berries);
+        berries -= berriesPicked;
+        System.out.println(berriesPicked + " berries picked from bush at: " + location);
+        return berriesPicked;
     }
 
     @Override
     public void act(World world) {
-        // Initialize bushes in the world if needed
+        regenerateBerries();
+    }
+
+    private void regenerateBerries() {
+        if (berries < MAX_BERRIES) {
+            berries += BERRY_REGEN_RATE; // Regenerér bær over tid
+            System.out.println("Bush at " + location + " regenerated berries. Current berries: " + berries);
+        }
+    }
+
+    public int getBerries() {
+        return berries;
     }
 
     public Location getLocation() {
         return location;
-    }
-
-    public static void placeRandomBushes(World world, Program program) {
-        Random random = new Random();
-        int numberOfBushes = random.nextInt(5) + 1; // Random number between 1 and 5
-        int worldSize = world.getSize();
-
-        for (int i = 0; i < numberOfBushes; i++) {
-            int x = random.nextInt(worldSize);
-            int y = random.nextInt(worldSize);
-            Location location = new Location(x, y);
-
-            // Ensure the tile is empty before placing a bush
-            if (world.isTileEmpty(location)) {
-                Bush bush = new Bush(location);
-                world.setTile(location, bush);
-                program.setDisplayInformation(Bush.class, new DisplayInformation(Color.GREEN, "bush"));
-            }
-        }
-    }
-
-    private static void initializeBushesInWorld(World world, Program program) {
-        if (world != null && program != null) {
-            placeRandomBushes(world, program);
-        }
-    }
-
-    @Override
-    public String toString() {
-        return "Bush at " + location;
     }
 }

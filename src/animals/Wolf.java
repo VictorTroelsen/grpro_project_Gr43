@@ -1,25 +1,52 @@
 package animals;
 
 import itumulator.executable.Program;
-import itumulator.world.Location;
 import itumulator.world.World;
+import itumulator.world.Location;
 
-import java.util.Random;
 
-public class Wolf extends Carnivore{
+public class Wolf extends Animal{
+
+    private final boolean isPlaced;
 
     public Wolf(World world, Location initiallocation, Program program) {
-        super(world, initiallocation, program);
-        this.age = 0;
-        this.energy = 100;
+        super(world,initiallocation,program);
         this.isPlaced = placeAnimal(initiallocation);
+        this.energy = 120;
     }
+
     @Override
     public void act(World world) {
-        if(energy <= 40) {
+        System.out.println(this + " energy before hunt: " + energy);
+        if(energy <= 80) {
             hunt();
+        }
+
+        super.act(world); // Kald forældremetoden for at håndtere standardadfærd som bevægelse og energiforbrug.
+
+        if (energy <= 0 || age > maximumAge()) {
+            dies(); // Kalder dies metoden fra Animal klassen
         }
     }
 
+    @Override
+    public int maximumAge() {
+        return 20;
+    }
 
+    @Override
+    protected boolean canHunt(Object prey) {
+        if (prey instanceof Bear) {
+            return getPackSize() >= 3;
+        } else return prey instanceof Rabbit;
+    }
+
+    public boolean isPlaced() {
+        return isPlaced;
+    }
+
+    public int getPackSize() {
+        // Implementer logik for at bestemme størrelsen på flokken
+        return 3; // Eksempelværdi, erstat med reel logik
+    }
 }

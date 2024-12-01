@@ -9,11 +9,11 @@ public class Main {
 
     public static void main(String[] args) {
         String directoryPath = "week-2";
-        String specificFileName = "t2-1ab.txt";
+        String specificFileName = "t2-2a.txt";
 
         try {
-            List<Path> txtFiles = FileReaderUtil.getTxtFilesFromDirectory(directoryPath);
 
+            List<Path> txtFiles = FileReaderUtil.getTxtFilesFromDirectory(directoryPath);
             if (!txtFiles.isEmpty()) {
                 Path selectedFile = null;
                 for (Path file : txtFiles) {

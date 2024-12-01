@@ -39,18 +39,18 @@ public class Rabbit extends Animal {//implements Actor {
             leaveBurrow();
 
             move();
-            energy -= 5;
             age++;
             if (energy <= 60) {
                 eatGrass(location);
             }
             updateEnergyRabbit();
+            reproduce();
 
         if (energy <= 0 || age == 20) {
             dies();
         }
 
-            reproduce();
+
 
             if (homeHole == null && energy >= 20) {
                 digHole();
@@ -59,14 +59,9 @@ public class Rabbit extends Animal {//implements Actor {
         }
     }
 
-    public boolean isPlaced() {
-        return isPlaced;
-    }
-
-
 
     private void updateEnergyRabbit() {
-        energy -= 2 * age;
+        energy -= age;
 
         if (world.getTile(location) instanceof Grass) {
             energy += 20;

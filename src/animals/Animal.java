@@ -25,6 +25,11 @@ public class Animal implements Actor {
         this.program = program;
     }
 
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName(); // Returner klassens navn som dyrets navn
+    }
+
     protected boolean canHunt(Object prey) {
         return prey instanceof Animal && !(prey instanceof NonBlocking) && !(prey.getClass().equals(this.getClass()));
     }
@@ -33,13 +38,19 @@ public class Animal implements Actor {
         Set<Location> surroundingTiles = world.getSurroundingTiles(location);
         for (Location loc : surroundingTiles) {
             Object prey = world.getTile(loc);
-            if (prey instanceof Animal && canHunt(prey)) {
+            System.out.println("Checking location: " + loc + " for prey.");
+            if (prey instanceof Rabbit && canHunt(prey)) {
                 world.delete(prey);
                 energy += 50; // Standard værdistigning for at jage bytte
-                System.out.println(Animal + " hunted and ate prey at location: " + loc);
+                System.out.println(this + " hunted and ate prey at location: " + loc);
                 break;
             }
         }
+    }
+
+    protected int maximumAge() {
+        // Angiv et standard maximum alder for dyr, der kan overskrives af specifikke arter
+        return 20;
     }
 
     private int initialEnergy() {
@@ -90,7 +101,7 @@ public class Animal implements Actor {
 
     public void move() {
         if (!world.isOnTile(this)) {
-            System.out.println(Animal + " is not on any tile.");
+            System.out.println(this + " is not on any tile.");
             return;
         }
 
@@ -106,7 +117,7 @@ public class Animal implements Actor {
         }
 
         for (Location newLocation : shuffledTiles) {
-            System.out.println(Animal + " attempting to move from " + location + " to " + newLocation);
+            System.out.println(this + " attempting to move from " + location + " to " + newLocation);
 
             Object tileContent = world.getTile(newLocation);
 
@@ -118,7 +129,7 @@ public class Animal implements Actor {
                     location = newLocation;
 
 
-                    System.out.println(Animal + " moved to location: " + newLocation);
+                    System.out.println(this + " moved to location: " + newLocation);
                     return;
                 } catch (IllegalArgumentException e) {
                     System.out.println("Move blocked: " + e.getMessage());
@@ -139,14 +150,14 @@ public class Animal implements Actor {
 
     boolean placeAnimal(Location initialLocation) {
         int attempts = 0;
-        int maxAttempts = 2; //world.getSize() * world.getSize();
+        int maxAttempts = 2; // Eller brug en dynamisk beregning, som er blevet kommenteret
         Random random = new Random();
 
         while (attempts < maxAttempts) {
             if (initialLocation != null && isTileEmptyOrNonBlocking(initialLocation)) {
                 this.location = initialLocation;
                 world.setTile(initialLocation, this);
-                System.out.println(Animal + "placed at location: " + initialLocation);
+                System.out.println(this + " placed at location: " + initialLocation);
                 return true;
             }
 
@@ -157,12 +168,12 @@ public class Animal implements Actor {
             if (isTileEmptyOrNonBlocking(location)) {
                 this.location = location;
                 world.setTile(location, this);
-                System.out.println(Animal + "placed at location: " + location);
+                System.out.println(this + " placed at location: " + location);
                 return true;
             }
             attempts++;
         }
-        System.out.println(Animal + "could not be placed after " + maxAttempts + " attempts");
+        System.out.println(this + " could not be placed after " + attempts + " attempts");
         return false;
     }
 }

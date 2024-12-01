@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.*;
 import java.awt.Color;
 
+import actions.WolfDen;
 import animals.Bear;
 import animals.Wolf;
 import animals.Rabbit;
@@ -54,6 +55,7 @@ public class FileReaderUtil {
             p.setDisplayInformation(RabbitHole.class, new DisplayInformation(Color.RED, "hole-small"));
             p.setDisplayInformation(Bear.class, new DisplayInformation(Color.CYAN, "bear"));
             p.setDisplayInformation(Wolf.class, new DisplayInformation(Color.BLUE, "wolf"));
+            p.setDisplayInformation(WolfDen.class, new DisplayInformation(Color.BLACK, "hole"));
             p.setDisplayInformation(Bush.class, new DisplayInformation(Color.PINK, "bush-berries"));
 
             logWorldState(w, "Initial world state");
@@ -62,46 +64,42 @@ public class FileReaderUtil {
 
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split("\\s+");
-                if (parts.length == 2) {
+                if (parts.length >= 2) {
                     String type = parts[0];
                     try {
-                        if (parts[1].contains("-")) {
-                            String[] range = parts[1].split("-");
-                            int minValue = Integer.parseInt(range[0]);
-                            int maxValue = Integer.parseInt(range[1]);
-                            int count = minValue + new Random().nextInt(maxValue - minValue + 1);
-                            addElementsToWorld(type, count, p);
-                        } else {
-                            System.err.println("Invalid line in file " + path + ": " + line);
+                        // Kontrollér om koordinaterne findes i `parts[1]`
+                        if (parts[1].matches("\\d+") && parts.length > 2 && parts[2].matches("\\(\\d+,\\d+\\)")) {
+                            String[] coords = parts[2].replaceAll("[()]", "").split(",");
+                            int x = Integer.parseInt(coords[0]);
+                            int y = Integer.parseInt(coords[1]);
+                            addElementsToWorld(type, 1, p, x, y);
+                        }
+                        // Hvis koordinaterne er inden i `parts[1]`
+                        else if (parts[1].matches("\\(\\d+,\\d+\\)")) {
+                            String[] coords = parts[1].replaceAll("[()]", "").split(",");
+                            int x = Integer.parseInt(coords[0]);
+                            int y = Integer.parseInt(coords[1]);
+                            addElementsToWorld(type, 1, p, x, y);
+                        }
+                        else {
+                            // Håndterer antals- og interval-strenge tilfælde
+                            String value = parts[1];
+                            if (value.contains("-")) {
+                                String[] range = parts[1].split("-");
+                                int minValue = Integer.parseInt(range[0]);
+                                int maxValue = Integer.parseInt(range[1]);
+                                int count = minValue + new Random().nextInt(maxValue - minValue + 1);
+                                addElementsToWorld(type, count, p);
+                            } else {
+                                int count = Integer.parseInt(parts[1]);
+                                addElementsToWorld(type, count, p);
+                            }
                         }
                     } catch (NumberFormatException e) {
                         System.err.println("Invalid number format in line: " + line);
                     }
                 } else {
                     System.err.println("Invalid line format in file " + path + ": " + line);
-                }
-
-
-
-                String type = parts[0];
-                if (parts.length > 2 && parts[2].matches("\\(\\d+,\\)")) {
-                    String[] coords = parts[2].replaceAll("[()]", "").split(",");
-                    int x = Integer.parseInt(coords[0]);
-                    int y = Integer.parseInt(coords[1]);
-                    addElementsToWorld(type, 1, p, x, y);
-
-                } else {
-                    String value = parts[1];
-                    if (value.contains("-")) {
-                        String[] range = value.split("-");
-                        int minValue = Integer.parseInt(range[0]);
-                        int maxValue = Integer.parseInt(range[1]);
-                        int count = minValue + new Random().nextInt(maxValue - minValue + 1);
-                        addElementsToWorld(type, count, p);
-                    } else {
-                        int count = Integer.parseInt(value);
-                        addElementsToWorld(type, count, p);
-                    }
                 }
             }
         } catch (IOException e) {
@@ -150,19 +148,21 @@ public class FileReaderUtil {
                             addedCount++;
                             break;
                         case "berry":
-                            Bush bush = new Bush(location);
-                            actorManager.addActor(bush, location);
+                            Bush bush = new Bush(w, location);
+                            //actorManager.addActor(bush, location);
                             addedCount++;
                             break;
                         case "bear":
                             Bear bear = new Bear(w, location, p);
-                            actorManager.addActor(bear, location);
-                            if(bear.isPlaced()) {}
-                            addedCount++;
+                            //actorManager.addActor(bear, location);
+                            if(bear.isPlaced()) {
+                                addedCount++;
+                            }
+
                             break;
                         case "wolf":
                             Wolf wolf = new Wolf(w,location,p);
-                            actorManager.addActor(wolf, location);
+                            //actorManager.addActor(wolf, location);
                             if (wolf.isPlaced()) {
                                 addedCount++;
                             }
