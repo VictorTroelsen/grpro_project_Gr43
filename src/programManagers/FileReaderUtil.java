@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.util.*;
 import java.awt.Color;
 
-
 import animals.Bear;
 import animals.Wolf;
 import animals.Rabbit;
