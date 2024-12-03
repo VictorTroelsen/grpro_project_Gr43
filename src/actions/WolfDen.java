@@ -5,6 +5,7 @@ import itumulator.world.Location;
 import itumulator.world.NonBlocking;
 import itumulator.world.World;
 
+import itumulator.executable.Program;
 import java.util.*;
 
 public class WolfDen implements NonBlocking {
@@ -22,6 +23,20 @@ public class WolfDen implements NonBlocking {
 
     public void removeWolf(Wolf wolf) {
         connectedWolves.remove(wolf);
+    }
+
+    public void reproduce(World world, Program program) {
+        // Assume that Object program is a placeholder for actual program type
+        if (connectedWolves.size() >= 2) {
+            System.out.println("Wolves are reproducing in the den.");
+
+            Location newLocation = findSuitableLocation(world);
+            if (newLocation != null) {
+                Wolf newWolf = new Wolf(world, newLocation, program);
+                world.add(newWolf);
+                System.out.println("A new wolf was born at " + newLocation);
+            }
+        }
     }
 
     public Location getLocation() {
@@ -62,5 +77,11 @@ public class WolfDen implements NonBlocking {
         path.add(start);
         path.add(end);
         return path;
+    }
+
+    private Location findSuitableLocation(World world) {
+        // Implement logic to find a suitable location around the den
+        // As a placeholder, returning null meaning it should be properly implemented
+        return null;
     }
 }

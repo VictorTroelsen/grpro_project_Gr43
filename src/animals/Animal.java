@@ -30,23 +30,7 @@ public class Animal implements Actor {
         return this.getClass().getSimpleName(); // Returner klassens navn som dyrets navn
     }
 
-    protected boolean canHunt(Object prey) {
-        return prey instanceof Animal && !(prey instanceof NonBlocking) && !(prey.getClass().equals(this.getClass()));
-    }
 
-    protected void hunt() {
-        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
-        for (Location loc : surroundingTiles) {
-            Object prey = world.getTile(loc);
-            System.out.println("Checking location: " + loc + " for prey.");
-            if (prey instanceof Rabbit && canHunt(prey)) {
-                world.delete(prey);
-                energy += 50; // Standard værdistigning for at jage bytte
-                System.out.println(this + " hunted and ate prey at location: " + loc);
-                break;
-            }
-        }
-    }
 
     protected int maximumAge() {
         // Angiv et standard maximum alder for dyr, der kan overskrives af specifikke arter

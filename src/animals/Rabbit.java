@@ -32,6 +32,11 @@ public class Rabbit extends Animal {//implements Actor {
     }
 
     @Override
+    public int maximumAge() {
+        return 25;
+    }
+
+    @Override
     public void act(World world) {
         if(world.isNight()) {
             moveToBurrow();
@@ -40,13 +45,13 @@ public class Rabbit extends Animal {//implements Actor {
 
             move();
             age++;
-            if (energy <= 60) {
+            if (energy <= 50) {
                 eatGrass(location);
             }
             updateEnergyRabbit();
             reproduce();
 
-        if (energy <= 0 || age == 20) {
+        if (energy <= 0 || age == maximumAge()) {
             dies();
         }
 
@@ -59,16 +64,12 @@ public class Rabbit extends Animal {//implements Actor {
         }
     }
 
-
     private void updateEnergyRabbit() {
-        energy -= age;
-
+        energy -= 2 * age;
         if (world.getTile(location) instanceof Grass) {
             energy += 20;
-            world.setTile(location, null);
             System.out.println("Dyr.Rabbit ate grass at location: " + location);
         }
-
         checkAndUpdateLocation();
     }
 
@@ -89,11 +90,11 @@ public class Rabbit extends Animal {//implements Actor {
     }
 
     private void reproduce() {
-        if (age > 5 && energy > 60) {
+        if (age > 3 && energy > 60) {
             Location babyLocation = findEmptyAdjacentLocation();
             if (babyLocation != null) {
                 Rabbit baby = new Rabbit(world, babyLocation, program);
-                System.out.println("Dyr.Rabbit reproduced at location: " + babyLocation);
+                System.out.println(this + " reproduced at location: " + babyLocation);
                 energy -= 15;
             }
         }

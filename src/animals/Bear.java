@@ -10,9 +10,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-public class Bear extends Animal {
+public class Bear extends Carnivore {
     private final Location territoryCenter;
-    private static final int TERRITORY_RADIUS = 10; // Radius for bjørnens territorium
+    private static final int TERRITORY_RADIUS = 5; // Radius for bjørnens territorium
 
     public Bear(World world, Location initialLocation, Program program) {
         super(world, initialLocation, program);
@@ -25,18 +25,18 @@ public class Bear extends Animal {
 
     @Override
     public void act(World world) {
+        moveWithinTerritory();
         if (world.isDay()) {
             hunt();
             forageBerries();
 
         }
-        moveWithinTerritory();
         updateEnergy();
 
         if (energy <= 0) {
             dies();
         }
-    }
+}
 
     private void forageBerries() {
         Set<Location> surroundingTiles = world.getSurroundingTiles(location);

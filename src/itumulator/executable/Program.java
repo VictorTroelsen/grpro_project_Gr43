@@ -12,7 +12,7 @@ import itumulator.world.World;
  * The Program contains two views (changable by clicking the topic right button). It defaults to the isomorphic 2.5d perspective, unless the size of the map exceeds 20.
  */
 public class Program {
-    private final int MAX_2D_SIZE_DEFAULT = 20;
+    private final int MAX_2D_SIZE_DEFAULT = 30;
     private int size;
     private World w;
     private Canvas c;
