@@ -104,11 +104,20 @@ public class Wolf extends Carnivore{
         return alphaWolf;
     }
 
-    public static void chooseNewAlpha() {
+    public void createNewPack() {
         if (!pack.isEmpty()) {
-            Wolf[] wolves = pack.toArray(new Wolf[0]);
-            alphaWolf = wolves [new Random().nextInt(wolves.length)];
+            wolves = pack.toArray(new Wolf[0]);
         }
+
+        if(alphaWolf == null){
+            chooseNewAlpha();
+        }
+    }
+
+    public void chooseNewAlpha() {
+        Random random = new Random();
+        int randomIndex = random.nextInt(pack.size());
+        alphaWolf = pack.toArray(new Wolf[0])[randomIndex];
     }
 
     public void moveToPack() {
@@ -125,7 +134,7 @@ public class Wolf extends Carnivore{
             }
         }
         if(pack.size() == maxPacksize()){
-            chooseNewAlpha();
+            createNewPack();
         }
     }
 
