@@ -3,6 +3,7 @@ package animals;
 import itumulator.executable.Program;
 import itumulator.world.World;
 import itumulator.world.Location;
+import actions.WolfDen;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -14,6 +15,9 @@ public class Wolf extends Carnivore{
     private static Wolf alphaWolf;
     private static Set<Wolf> pack = new HashSet<>();
     private final boolean isPlaced;
+    private WolfDen den;
+    private Location location;
+    private Wolf[] wolves;
 
     public Wolf(World world, Location initiallocation, Program program) {
         super(world,initiallocation,program);
@@ -36,6 +40,27 @@ public class Wolf extends Carnivore{
         }
 
         super.act(world); // Kald forældremetoden for at håndtere standardadfærd som bevægelse og energiforbrug.
+
+        if (pack.size() > 1 && den == null) {
+            Location denLocation = findEmptyAdjacentLocation();
+            if (denLocation != null) {
+                digDen(denLocation);
+            }
+        }
+
+        if(world.isNight() && den != null) {
+            Set<Location> pathToDen = den.getPath(world, getWolfLocation(), den.getLocation());
+            for (Location step : pathToDen) {
+                if (world.isTileEmpty(step)) {
+                    world.move(this, step);
+                    this.location = step;
+                    System.out.println(this + " moved to den at location: " + step);}
+            }
+        }
+
+        if (this.location.equals(den.getLocation())) {
+            den.reproduce(world, program);
+        }
 
         if (energy <= 0 || age > maximumAge()) {
             dies(); // Kalder dies metoden fra Animal klassen
@@ -114,6 +139,22 @@ public class Wolf extends Carnivore{
 
     private int distance (Location a, Location b) {
         return Math.abs(a.getX() - b.getX()) + Math.abs(a.getY() - b.getY());
+    }
+
+    public void digDen(Location location) {
+        if (den == null) {
+            den = new WolfDen(location);
+            den.addWolf(this);
+            System.out.println(this + " has dug a new den at location: " + location);
+        }
+    }
+
+    public Location getWolfLocation() {
+        return location;
+    }
+
+    public void setDen(WolfDen den) {
+        this.den = den;
     }
 
 }

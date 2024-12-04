@@ -19,11 +19,24 @@ public class WolfDen implements NonBlocking {
 
     public void addWolf(Wolf wolf) {
         connectedWolves.add(wolf);
+        wolf.setDen(this);
     }
 
     public void removeWolf(Wolf wolf) {
         connectedWolves.remove(wolf);
+        wolf.setDen(null);
     }
+
+    public void connectPackToDen(List<Wolf> wolfPack) {
+        for (Wolf wolf : wolfPack) {
+            if( !connectedWolves.contains(wolf) ) {
+                connectedWolves.add(wolf);
+                wolf.setDen(this);
+            }
+        }
+    }
+
+
 
     public void reproduce(World world, Program program) {
         // Assume that Object program is a placeholder for actual program type
