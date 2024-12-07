@@ -23,6 +23,7 @@ public class Animal implements Actor {
         this.energy = 100;
         this.age = 0;
         this.program = program;
+        this.location = initialLocation;
     }
 
     @Override

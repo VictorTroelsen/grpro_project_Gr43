@@ -56,7 +56,7 @@ public class FileReaderUtil {
             p.setDisplayInformation(Bear.class, new DisplayInformation(Color.CYAN, "bear"));
             p.setDisplayInformation(Wolf.class, new DisplayInformation(Color.BLUE, "wolf"));
             p.setDisplayInformation(WolfDen.class, new DisplayInformation(Color.BLACK, "hole"));
-            p.setDisplayInformation(Bush.class, new DisplayInformation(Color.PINK, "bush-berries"));
+            p.setDisplayInformation(Bush.class, new DisplayInformation(Color.PINK, "bush"));
 
             logWorldState(w, "Initial world state");
 
@@ -148,7 +148,7 @@ public class FileReaderUtil {
                             addedCount++;
                             break;
                         case "berry":
-                            Bush bush = new Bush(w, location);
+                            Bush bush = new Bush(w, location,p);
                             //actorManager.addActor(bush, location);
                             addedCount++;
                             break;

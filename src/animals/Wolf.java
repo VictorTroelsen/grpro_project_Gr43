@@ -1,10 +1,13 @@
 package animals;
 
+import itumulator.executable.DisplayInformation;
 import itumulator.executable.Program;
 import itumulator.world.World;
 import itumulator.world.Location;
+import itumulator.world.NonBlocking;
 import actions.WolfDen;
 
+import java.awt.*;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Random;
@@ -21,18 +24,25 @@ public class Wolf extends Carnivore{
 
     public Wolf(World world, Location initiallocation, Program program) {
         super(world,initiallocation,program);
+        this.location = initiallocation;
         if (pack.isEmpty()) {
             alphaWolf = this;
         }
         pack.add(this);
         this.isPlaced = placeAnimal(initiallocation);
         this.energy = 150;
+
+
     }
 
     @Override
     public void act(World world) {
-        if (pack.size() > 1) {
-            moveToPack();
+        if (pack.size() > 1 && world.isDay()) {
+            for (Wolf wolf : pack) {
+                if (!wolf.equals(alphaWolf)) {
+                    wolf.moveToPack();
+                }
+            }
         }
         System.out.println(this + " energy before hunt: " + energy);
         if(energy <= 100) {
@@ -58,12 +68,44 @@ public class Wolf extends Carnivore{
             }
         }
 
-        if (this.location.equals(den.getLocation())) {
-            den.reproduce(world, program);
-        }
+
 
         if (energy <= 0 || age > maximumAge()) {
             dies(); // Kalder dies metoden fra Animal klassen
+        }
+    }
+
+    @Override
+    protected void hunt() {
+        if (this.equals(alphaWolf)) {
+            // Kun alpha-ulven vælger bytte, resten følger alphaen
+            Set<Location> surroundingTiles = world.getSurroundingTiles(location, program.getSize() / 5);
+            for (Location loc : surroundingTiles) {
+                Object prey = world.getTile(loc);
+                if (prey instanceof Rabbit && canHunt(prey)) {
+                    System.out.println(this + " found rabbit to hunt at location: " + loc);
+                    try {
+                        world.delete(prey);
+                        System.out.println("Rabbit at location " + loc + " has been eaten and deleted.");
+
+                        world.move(this, loc);
+                        location = loc;
+
+                        // Del energi mellem ulvene i pakken
+                        int energyShare = 50 / pack.size();
+                        for (Wolf wolf : pack) {
+                            wolf.energy += energyShare;
+                        }
+                        System.out.println(this + " moved to location " + loc + " after eating.");
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Error occurred while hunting for " + this + " at location: " + loc + ". " + e.getMessage());
+                    }
+                    break;
+                }
+            }
+        } else {
+            // Flyt mod alphaen, hvis ikke alpha og den er på jagt
+            moveToPack();
         }
     }
 
@@ -115,27 +157,36 @@ public class Wolf extends Carnivore{
     }
 
     public void chooseNewAlpha() {
+        if (pack.isEmpty()) {
+            System.out.println("Pakken er tom, der kan ikke vælges en ny alpha.");
+            return; // Tidligere attempt at stoppe
+        }
+
         Random random = new Random();
         int randomIndex = random.nextInt(pack.size());
         alphaWolf = pack.toArray(new Wolf[0])[randomIndex];
     }
 
     public void moveToPack() {
-        if (alphaWolf != null && !this.equals(alphaWolf)) {
+        if (!this.equals(alphaWolf)) {
             Location alphaLocation = world.getLocation(alphaWolf);
-            Set<Location> path = world.getSurroundingTiles(this.location);
-            Location bestMove = chooseBestMoveTowards (alphaLocation, path);
+            int maxRange = 2;  // Juster dette tal, hvis det er nødvendigt
+            if (distance(this.location, alphaLocation) > maxRange) {
+                Set<Location> path = world.getSurroundingTiles(this.location);
+                Location bestMove = chooseBestMoveTowards(alphaLocation, path);
 
-            if (bestMove != null && world.isTileEmpty(bestMove)) {
-                world.move(this, bestMove);
-                this.location = bestMove;
+                if (bestMove != null && world.isTileEmpty(bestMove)) {
+                    world.move(this, bestMove);
+                    this.location = bestMove;
 
-                System.out.println(this + " moved towards the pack leader at location: " + alphaLocation);
+                    System.out.println(this + " moved towards the pack leader at location: " + alphaLocation);
+                }
             }
         }
-        if(pack.size() == maxPacksize()){
-            createNewPack();
-        }
+    }
+
+    private boolean isWithinRange(Location loc, Location target, int range) {
+        return distance(loc, target) <= range;
     }
 
     public int maxPacksize() {
@@ -151,10 +202,24 @@ public class Wolf extends Carnivore{
     }
 
     public void digDen(Location location) {
-        if (den == null) {
-            den = new WolfDen(location);
-            den.addWolf(this);
-            System.out.println(this + " has dug a new den at location: " + location);
+        if (den == null && energy >= 20) {
+            if (world.getTile(location) == null || world.getTile(location) instanceof NonBlocking) {
+                // Hvis der ikke er noget non-blocking element, graver ulven hulen
+                den = new WolfDen(location);
+                den.addWolf(this);
+
+                world.setTile(location, den); // Sæt hulen fysisk på kortet
+
+                // Opsæt visuel information for wolf den
+                DisplayInformation displayInformation = new DisplayInformation(Color.GRAY, "hole");
+                program.setDisplayInformation(WolfDen.class, displayInformation);
+
+                energy -= 20; // Juster energiforbruget
+                System.out.println(this + " has dug a new den at location: " + location);
+            } else {
+                System.out.println("Could not dig den at location: " + location + " because it's occupied by a non-blocking element.");
+                // Her kan du forsøge at finde et nyt sted, hvis det er ønsket
+            }
         }
     }
 

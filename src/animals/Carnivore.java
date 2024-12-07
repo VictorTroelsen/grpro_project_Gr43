@@ -23,7 +23,7 @@ class Carnivore extends Animal {
         Set<Location> surroundingTiles = world.getSurroundingTiles(location, program.getSize() / 5);
         for (Location loc : surroundingTiles) {
             Object prey = world.getTile(loc); // Få objektet på den nuværende position
-            System.out.println("Checking location: " + loc + " for prey.");
+            //System.out.println("Checking location: " + loc + " for prey.");
             if (prey instanceof Rabbit && canHunt(prey)) { // Tjek om byttet er en kanin og kan jages
                 System.out.println(this + " found rabbit to hunt at location: " + loc);
                 try {

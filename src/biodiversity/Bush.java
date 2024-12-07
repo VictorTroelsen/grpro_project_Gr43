@@ -1,9 +1,12 @@
 package biodiversity;
 
+import itumulator.executable.DisplayInformation;
+import itumulator.executable.Program;
 import itumulator.simulator.Actor;
 import itumulator.world.Location;
 import itumulator.world.World;
 
+import java.awt.*;
 import java.util.Random;
 
 public class Bush implements Actor {
@@ -11,12 +14,16 @@ public class Bush implements Actor {
     private World world;
     private int berries; // Antallet af bær busken har
     private static final int MAX_BERRIES = 10; // Maksimalt antal bær busken kan have
-    private static final int BERRY_REGEN_RATE = 1; // Antal bær, der regenereres per trin
+    private boolean hasBerries; // Indikerer om busken har bær
+    private Program program; // Reference til programmet for display information
 
-    public Bush(World world, Location initialLocation) {
+    public Bush(World world, Location initialLocation, Program program) {
         this.world = world;
         this.location = initialLocation;
+        this.program = program;
         this.berries = new Random().nextInt(MAX_BERRIES) + 1; // Start med et tilfældigt antal bær
+        this.hasBerries = berries > 0;
+        updateDisplay(); // Initial visuel repræsentation
         placeBush(initialLocation);
     }
 
@@ -32,27 +39,27 @@ public class Bush implements Actor {
     public int pickBerries(int amount) {
         int berriesPicked = Math.min(amount, berries);
         berries -= berriesPicked;
+        hasBerries = berries > 0;
+        updateDisplay(); // Opdater visuel repræsentation
         System.out.println(berriesPicked + " berries picked from bush at: " + location);
         return berriesPicked;
     }
 
+    private void updateDisplay() {
+        String imageName = hasBerries ? "bush-berries" : "bush";
+        DisplayInformation displayInformation = new DisplayInformation(Color.BLACK, "bush-berries");
+        program.setDisplayInformation(Bush.class, displayInformation);
+        System.out.println("Bush display updated to: " + imageName);
+    }
+
     @Override
     public void act(World world) {
-        regenerateBerries();
-    }
-
-    private void regenerateBerries() {
-        if (berries < MAX_BERRIES) {
-            berries += BERRY_REGEN_RATE; // Regenerér bær over tid
-            System.out.println("Bush at " + location + " regenerated berries. Current berries: " + berries);
+        // Regenerer bær næste dag
+        if (!hasBerries && berries < MAX_BERRIES) {
+            berries = MAX_BERRIES;
+            hasBerries = true;
+            updateDisplay(); // Opdater visuel repræsentation
+            System.out.println("Bush at " + location + " regenerated berries.");
         }
-    }
-
-    public int getBerries() {
-        return berries;
-    }
-
-    public Location getLocation() {
-        return location;
     }
 }

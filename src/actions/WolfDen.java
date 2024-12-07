@@ -65,6 +65,12 @@ public class WolfDen implements NonBlocking {
         Queue<Location> queue = new LinkedList<>();
         Map<Location, Location> cameFrom = new HashMap<>();
 
+        // Check for null locations to prevent NullPointerException
+        if (start == null || end == null) {
+            System.out.println("Warning: Provided locations cannot be null.");
+            return path; // Return an empty path when either location is null
+        }
+
         queue.add(start);
         cameFrom.put(start, null);
 
