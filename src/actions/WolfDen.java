@@ -11,10 +11,16 @@ import java.util.*;
 public class WolfDen implements NonBlocking {
     private Location location;
     private List<Wolf> connectedWolves;
+    private boolean hasReproduced;
 
     public WolfDen(Location location) {
         this.location = location;
         this.connectedWolves = new ArrayList<>();
+        this.hasReproduced = false;
+    }
+
+    public void beginNight() {
+        hasReproduced = false;
     }
 
     public void addWolf(Wolf wolf) {
@@ -25,6 +31,27 @@ public class WolfDen implements NonBlocking {
     public void removeWolf(Wolf wolf) {
         connectedWolves.remove(wolf);
         wolf.setDen(null);
+    }
+
+    public void hideWolves(World world) {
+        for (Wolf wolf : connectedWolves) {
+            world.remove(wolf);
+            System.out.println(wolf + " is now hiding in the den.");
+        }
+    }
+
+    public void revealWolves(World world, Program program) {
+        for (Wolf wolf : connectedWolves) {
+            Location spot = findSuitableLocation(world);
+            if (spot != null && world.isTileEmpty(spot)) {
+                try {
+                    wolf.relocate(world, spot, program);
+                    System.out.println(wolf + " has emerged from the den at " + spot);
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Failed to reveal wolf " + wolf + ": " + e.getMessage());
+                }
+            }
+        }
     }
 
     public void connectPackToDen(List<Wolf> wolfPack) {
@@ -38,18 +65,35 @@ public class WolfDen implements NonBlocking {
 
 
 
-    public void reproduce(World world, Program program) {
-        // Assume that Object program is a placeholder for actual program type
-        if (connectedWolves.size() >= 2) {
+    public void reproduce(World world, Program program, int maxNewWolves) {
+        if (hasReproduced) {
+            System.out.println("Already reproduced this night.");
+            return;
+        }
+
+        int newWolvesCount = 0;
+
+        while (newWolvesCount < maxNewWolves && connectedWolves.size() >= 2) {
             System.out.println("Wolves are reproducing in the den.");
 
             Location newLocation = findSuitableLocation(world);
-            if (newLocation != null) {
+            if (newLocation != null && world.isTileEmpty(newLocation)) {
                 Wolf newWolf = new Wolf(world, newLocation, program);
-                world.add(newWolf);
-                System.out.println("A new wolf was born at " + newLocation);
+                try {
+                    world.add(newWolf);
+                    System.out.println("A new wolf was born at " + newLocation);
+                    newWolvesCount++;
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Failed to add a new wolf at location " + newLocation + ": " + e.getMessage());
+                }
+            } else {
+                System.out.println("No suitable location found. Ending reproduction.");
+                break;
             }
         }
+
+        hasReproduced = true; // Markér som reproduceret
+        System.out.println("Reproduction cycle completed. Total new wolves: " + newWolvesCount);
     }
 
     public Location getLocation() {
@@ -99,8 +143,33 @@ public class WolfDen implements NonBlocking {
     }
 
     private Location findSuitableLocation(World world) {
-        // Implement logic to find a suitable location around the den
-        // As a placeholder, returning null meaning it should be properly implemented
+        // Vi antager, at den nuværende position er centrum for søgningen
+        Location center = this.location;
+
+        // Henter alle tilstødende positioner omkring centrum
+        Set<Location> surroundingLocations = world.getSurroundingTiles(center);
+
+        // Prøv at finde en tom lokation flere gange, med øget radius hver gang
+        int maxAttempts = 5;
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            for (Location potentialLocation : surroundingLocations) {
+                if (world.isTileEmpty(potentialLocation) || world.getTile(potentialLocation) instanceof NonBlocking) {
+                    return potentialLocation; // Return the first available location
+                }
+            }
+            surroundingLocations = expandSearchArea(world, center, attempt);
+        }
+
+        // Hvis ingen egnet lokation findes, returneres null
+        System.out.println("Could not find a suitable location for a new wolf.");
         return null;
+    }
+
+    private Set<Location> expandSearchArea(World world, Location center, int attempt) {
+        // Logik til at udvide søgeområdet
+        Set<Location> expandedArea = new HashSet<>();
+        // Implementer logik til at inkludere flere tilstødende områder baseret på attempt
+        // Dette kan inkludere at bruge en større radius eller inkorporere mere intelligente søgemetoder
+        return expandedArea;
     }
 }

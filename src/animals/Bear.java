@@ -26,17 +26,54 @@ public class Bear extends Carnivore {
     @Override
     public void act(World world) {
         moveWithinTerritory();
-        if (world.isDay()) {
+        if (world.isDay() && energy <= 70) {
             hunt();
-            forageBerries();
-
         }
         updateEnergy();
 
         if (energy <= 0) {
             dies();
         }
-}
+    }
+
+    @Override
+    protected boolean canHunt(Object prey) {
+        // Bjørnen kan jage kaniner og ulve
+        return prey instanceof Rabbit || prey instanceof Wolf;
+    }
+
+    @Override
+    protected void hunt() {
+        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
+        for (Location loc : surroundingTiles) {
+            Object prey = world.getTile(loc);
+            if (canHunt(prey)) {
+                System.out.println(this + " found prey to hunt at location: " + loc);
+                try {
+                    world.delete(prey); // Fjern byttet fra verdenen
+                    System.out.println(prey + " at location " + loc + " has been eaten and deleted.");
+
+                    // Flyt bjørnen til byttets position
+                    world.move(this, loc);
+                    location = loc;
+
+                    // Tilføj energi afhængigt af byttets type
+                    if (prey instanceof Rabbit) {
+                        energy += 50; // Kaniner giver mere energi
+                    } else if (prey instanceof Wolf) {
+                        energy += 75; // Ulve giver endnu mere energi
+                    }
+
+                    System.out.println(this + " moved to location " + loc + " after eating.");
+
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Error occurred while hunting at location: " + loc + ". " + e.getMessage());
+                }
+            }
+        }
+        System.out.println("No prey found near location: " + location);
+        forageBerries();
+    }
 
     private void forageBerries() {
         Set<Location> surroundingTiles = world.getSurroundingTiles(location);

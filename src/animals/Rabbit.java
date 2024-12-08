@@ -60,7 +60,6 @@ public class Rabbit extends Animal {//implements Actor {
             if (homeHole == null && energy >= 20) {
                 digHole();
             }
-            sleepOutside();
         }
     }
 

@@ -8,10 +8,7 @@ import itumulator.world.NonBlocking;
 import actions.WolfDen;
 
 import java.awt.*;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 
 public class Wolf extends Carnivore{
@@ -30,26 +27,18 @@ public class Wolf extends Carnivore{
         }
         pack.add(this);
         this.isPlaced = placeAnimal(initiallocation);
-        this.energy = 150;
+        this.energy = 120;
 
 
     }
 
-    @Override
     public void act(World world) {
-        if (pack.size() > 1 && world.isDay()) {
-            for (Wolf wolf : pack) {
-                if (!wolf.equals(alphaWolf)) {
-                    wolf.moveToPack();
-                }
-            }
-        }
         System.out.println(this + " energy before hunt: " + energy);
-        if(energy <= 100) {
+        if (energy < 120 && !world.isNight()) {
             hunt();
         }
 
-        super.act(world); // Kald forældremetoden for at håndtere standardadfærd som bevægelse og energiforbrug.
+        super.act(world);
 
         if (pack.size() > 1 && den == null) {
             Location denLocation = findEmptyAdjacentLocation();
@@ -58,20 +47,21 @@ public class Wolf extends Carnivore{
             }
         }
 
-        if(world.isNight() && den != null) {
-            Set<Location> pathToDen = den.getPath(world, getWolfLocation(), den.getLocation());
-            for (Location step : pathToDen) {
-                if (world.isTileEmpty(step)) {
-                    world.move(this, step);
-                    this.location = step;
-                    System.out.println(this + " moved to den at location: " + step);}
+        if (world.isNight() && den != null) {
+            moveToDen(world);
+
+            // Voks har reproduktion kapaciteten kun om natten
+            if (energy > 70 && pack.size() > 1) {
+                int maxNewWolves = pack.size() / 2;
+                den.reproduce(world, program, maxNewWolves);
+                energy -= 20;
             }
+        } else if (world.isDay() && den != null) {
+            leaveDen(world);
         }
 
-
-
         if (energy <= 0 || age > maximumAge()) {
-            dies(); // Kalder dies metoden fra Animal klassen
+            dies();
         }
     }
 
@@ -83,16 +73,16 @@ public class Wolf extends Carnivore{
             for (Location loc : surroundingTiles) {
                 Object prey = world.getTile(loc);
                 if (prey instanceof Rabbit && canHunt(prey)) {
-                    System.out.println(this + " found rabbit to hunt at location: " + loc);
+                    System.out.println(this + " found prey to hunt at location: " + loc);
                     try {
                         world.delete(prey);
-                        System.out.println("Rabbit at location " + loc + " has been eaten and deleted.");
+                        System.out.println("prey at location " + loc + " has been eaten and deleted.");
 
                         world.move(this, loc);
                         location = loc;
 
                         // Del energi mellem ulvene i pakken
-                        int energyShare = 50 / pack.size();
+                        int energyShare = 100 / pack.size();
                         for (Wolf wolf : pack) {
                             wolf.energy += energyShare;
                         }
@@ -133,6 +123,16 @@ public class Wolf extends Carnivore{
         }
     }
 
+    public void coordinatePackMovement(World world) {
+        if (pack.size() > 1 && world.isDay()) {
+            for (Wolf wolf : pack) {
+                if (!wolf.equals(alphaWolf)) {
+                    wolf.moveToPack();
+                }
+            }
+        }
+    }
+
     public boolean isPlaced() {
         return isPlaced;
     }
@@ -167,8 +167,9 @@ public class Wolf extends Carnivore{
         alphaWolf = pack.toArray(new Wolf[0])[randomIndex];
     }
 
+
     public void moveToPack() {
-        if (!this.equals(alphaWolf)) {
+        if (!this.equals(alphaWolf) && world.contains(this) && world.isOnTile(this)) {
             Location alphaLocation = world.getLocation(alphaWolf);
             int maxRange = 2;  // Juster dette tal, hvis det er nødvendigt
             if (distance(this.location, alphaLocation) > maxRange) {
@@ -204,21 +205,26 @@ public class Wolf extends Carnivore{
     public void digDen(Location location) {
         if (den == null && energy >= 20) {
             if (world.getTile(location) == null || world.getTile(location) instanceof NonBlocking) {
-                // Hvis der ikke er noget non-blocking element, graver ulven hulen
-                den = new WolfDen(location);
-                den.addWolf(this);
+                // Check for an alternative tile if needed
+                try {
+                    // Attempt to set the tile
+                    den = new WolfDen(location);
+                    den.addWolf(this);
+                    world.setTile(location, den); // Safely attempting to set the tile
 
-                world.setTile(location, den); // Sæt hulen fysisk på kortet
+                    // Set visual information for wolf den
+                    DisplayInformation displayInformation = new DisplayInformation(Color.GRAY, "hole");
+                    program.setDisplayInformation(WolfDen.class, displayInformation);
 
-                // Opsæt visuel information for wolf den
-                DisplayInformation displayInformation = new DisplayInformation(Color.GRAY, "hole");
-                program.setDisplayInformation(WolfDen.class, displayInformation);
-
-                energy -= 20; // Juster energiforbruget
-                System.out.println(this + " has dug a new den at location: " + location);
+                    energy -= 20; // Adjust energy consumption
+                    System.out.println(this + " has dug a new den at location: " + location);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Failed digging den at location: " + location + ". " + e.getMessage());
+                    // Consider alternative options if needed, e.g., try another location
+                }
             } else {
                 System.out.println("Could not dig den at location: " + location + " because it's occupied by a non-blocking element.");
-                // Her kan du forsøge at finde et nyt sted, hvis det er ønsket
+                // Consider finding a new spot if desired
             }
         }
     }
@@ -229,6 +235,56 @@ public class Wolf extends Carnivore{
 
     public void setDen(WolfDen den) {
         this.den = den;
+    }
+
+    public void relocate(World world, Location newLocation, Program program) {
+        this.location = newLocation;
+        world.setTile(newLocation, this);
+    }
+
+    public void moveToDen(World world) {
+        if (den != null) {
+            Location denLocation = den.getLocation();
+            if (!location.equals(denLocation)) {
+                Set<Location> pathToDen = den.getPath(world, location, denLocation);
+                try {
+                    world.move(this, denLocation);
+                    location = denLocation;
+                    pack.remove(this); // Fjern fra aktiv flok, tilføj til hulen
+                    den.addWolf(this); // Tilføj ulv til hulerne
+                    world.remove(this); // Fjern fra verdens kort
+
+                    // Visuel information til når ulven er i hulen
+                    program.setDisplayInformation(Wolf.class, new DisplayInformation(Color.DARK_GRAY,"wolf-sleeping"));
+
+                    System.out.println(this + " moved to den at location: " + denLocation);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Move to den failed: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    public void leaveDen(World world) {
+        if (den != null) {
+            Location exitLocation = den.getLocation();
+            try {
+                // Placer ulven tilbage på kortet
+                world.setTile(exitLocation, this);
+                location = exitLocation;
+
+                // Fjern ulv fra hule track
+                den.removeWolf(this);
+                pack.add(this); // Tilføj tilbage til aktiv flok
+
+                // Visuel information til når ulven er ude af hulen
+                program.setDisplayInformation(Wolf.class, new DisplayInformation(Color.GRAY, "wolf"));
+
+                System.out.println(this + " left den and moved to location: " + exitLocation);
+            } catch (IllegalArgumentException e) {
+                System.err.println("Leaving den failed: " + e.getMessage());
+            }
+        }
     }
 
 }
