@@ -33,9 +33,12 @@ public class Wolf extends Carnivore{
     }
 
     public void act(World world) {
-        System.out.println(this + " energy before hunt: " + energy);
-        if (energy < 120 && !world.isNight()) {
-            hunt();
+        if (world.isDay()) {
+            coordinatePackMovement(world);
+            System.out.println(this + " energy before hunt: " + energy);
+            if (energy < 120) {
+                hunt();
+            }
         }
 
         super.act(world);
@@ -52,8 +55,7 @@ public class Wolf extends Carnivore{
 
             // Voks har reproduktion kapaciteten kun om natten
             if (energy > 70 && pack.size() > 1) {
-                int maxNewWolves = pack.size() / 2;
-                den.reproduce(world, program, maxNewWolves);
+                den.reproduce(world, program);
                 energy -= 20;
             }
         } else if (world.isDay() && den != null) {
@@ -124,9 +126,10 @@ public class Wolf extends Carnivore{
     }
 
     public void coordinatePackMovement(World world) {
-        if (pack.size() > 1 && world.isDay()) {
+        if (world.isDay() && pack.size() > 1) { // Kun om dagen
             for (Wolf wolf : pack) {
-                if (!wolf.equals(alphaWolf)) {
+                if (!wolf.equals(alphaWolf) && wolf.getLocation() != null) { // Tjek også hvis ulvene ikke er i hule
+                    System.out.println(wolf + " is moving towards the pack leader.");
                     wolf.moveToPack();
                 }
             }
@@ -156,33 +159,55 @@ public class Wolf extends Carnivore{
         }
     }
 
+    public static void addToPack(Wolf newWolf) {
+        if (newWolf != null) {
+            pack.add(newWolf);
+            System.out.println(newWolf + " added to the pack.");
+        }
+    }
+
     public void chooseNewAlpha() {
         if (pack.isEmpty()) {
             System.out.println("Pakken er tom, der kan ikke vælges en ny alpha.");
-            return; // Tidligere attempt at stoppe
+            alphaWolf = null; // Alle ulve er væk, ingen ny alpha
+            return;
         }
-
         Random random = new Random();
         int randomIndex = random.nextInt(pack.size());
         alphaWolf = pack.toArray(new Wolf[0])[randomIndex];
+        System.out.println("A new alpha wolf has been chosen: " + alphaWolf);
     }
 
 
     public void moveToPack() {
+        // Check if wolf is in a den and shouldn't be moved
+        if (den != null) {
+            System.out.println(this + " is in a den and should not move.");
+            return;
+        }
+
         if (!this.equals(alphaWolf) && world.contains(this) && world.isOnTile(this)) {
             Location alphaLocation = world.getLocation(alphaWolf);
-            int maxRange = 2;  // Juster dette tal, hvis det er nødvendigt
-            if (distance(this.location, alphaLocation) > maxRange) {
+            if (alphaLocation != null) { // Ensure alpha's location is valid
+                int maxRange = 2; // Justér efter behov
                 Set<Location> path = world.getSurroundingTiles(this.location);
                 Location bestMove = chooseBestMoveTowards(alphaLocation, path);
-
                 if (bestMove != null && world.isTileEmpty(bestMove)) {
-                    world.move(this, bestMove);
-                    this.location = bestMove;
-
-                    System.out.println(this + " moved towards the pack leader at location: " + alphaLocation);
+                    try {
+                        world.move(this, bestMove);
+                        this.location = bestMove;
+                        System.out.println(this + " moved towards the pack leader at location: " + alphaLocation);
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Move failed: " + e.getMessage());
+                    }
+                } else {
+                    System.err.println("No valid move found for " + this + ".");
                 }
+            } else {
+                System.err.println("Alpha wolf is not correctly placed on the map.");
             }
+        } else {
+            System.err.println("Wolf is not correctly placed on the map.");
         }
     }
 
@@ -266,23 +291,26 @@ public class Wolf extends Carnivore{
     }
 
     public void leaveDen(World world) {
-        if (den != null) {
+        if (den != null && world.isDay()) {
             Location exitLocation = den.getLocation();
-            try {
-                // Placer ulven tilbage på kortet
-                world.setTile(exitLocation, this);
-                location = exitLocation;
+            if (world.isTileEmpty(exitLocation)) {
+                try {
+                    // Placer ulven tilbage på kortet
+                    world.setTile(exitLocation, this);
+                    location = exitLocation;
 
-                // Fjern ulv fra hule track
-                den.removeWolf(this);
-                pack.add(this); // Tilføj tilbage til aktiv flok
+                    // Fjern ulv fra hule track
+                    den.removeWolf(this);
+                    pack.add(this); // Tilføj tilbage til aktiv flok
 
-                // Visuel information til når ulven er ude af hulen
-                program.setDisplayInformation(Wolf.class, new DisplayInformation(Color.GRAY, "wolf"));
-
-                System.out.println(this + " left den and moved to location: " + exitLocation);
-            } catch (IllegalArgumentException e) {
-                System.err.println("Leaving den failed: " + e.getMessage());
+                    // Visuel information til når ulven er ude af hulen
+                    program.setDisplayInformation(Wolf.class, new DisplayInformation(Color.GRAY, "wolf"));
+                    System.out.println(this + " left den and moved to location: " + exitLocation);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Leaving den failed: " + e.getMessage());
+                }
+            } else {
+                System.out.println("Exit location for " + this + " is not empty.");
             }
         }
     }
