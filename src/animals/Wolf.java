@@ -33,9 +33,12 @@ public class Wolf extends Carnivore{
     }
 
     public void act(World world) {
-        System.out.println(this + " energy before hunt: " + energy);
-        if (energy < 120 && !world.isNight()) {
-            hunt();
+        if (world.isDay()) {
+            coordinatePackMovement(world);
+            System.out.println(this + " energy before hunt: " + energy);
+            if (energy < 120) {
+                hunt();
+            }
         }
 
         super.act(world);
@@ -242,6 +245,10 @@ public class Wolf extends Carnivore{
         world.setTile(newLocation, this);
     }
 
+    public static Set<Wolf> getPack() {
+        return pack;
+    }
+
     public void moveToDen(World world) {
         if (den != null) {
             Location denLocation = den.getLocation();
@@ -269,17 +276,7 @@ public class Wolf extends Carnivore{
         if (den != null) {
             Location exitLocation = den.getLocation();
             try {
-                // Placer ulven tilbage på kortet
-                world.setTile(exitLocation, this);
-                location = exitLocation;
-
-                // Fjern ulv fra hule track
-                den.removeWolf(this);
-                pack.add(this); // Tilføj tilbage til aktiv flok
-
-                // Visuel information til når ulven er ude af hulen
                 program.setDisplayInformation(Wolf.class, new DisplayInformation(Color.GRAY, "wolf"));
-
                 System.out.println(this + " left den and moved to location: " + exitLocation);
             } catch (IllegalArgumentException e) {
                 System.err.println("Leaving den failed: " + e.getMessage());

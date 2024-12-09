@@ -41,11 +41,14 @@ public class WolfDen implements NonBlocking {
     }
 
     public void revealWolves(World world, Program program) {
-        for (Wolf wolf : connectedWolves) {
+        Iterator<Wolf> iterator = connectedWolves.iterator();
+        while (iterator.hasNext()) {
+            Wolf wolf = iterator.next();
             Location spot = findSuitableLocation(world);
             if (spot != null && world.isTileEmpty(spot)) {
                 try {
                     wolf.relocate(world, spot, program);
+                    wolf.getPack().add(wolf);
                     System.out.println(wolf + " has emerged from the den at " + spot);
                 } catch (IllegalArgumentException e) {
                     System.out.println("Failed to reveal wolf " + wolf + ": " + e.getMessage());
@@ -64,7 +67,6 @@ public class WolfDen implements NonBlocking {
     }
 
 
-
     public void reproduce(World world, Program program, int maxNewWolves) {
         if (hasReproduced) {
             System.out.println("Already reproduced this night.");
@@ -72,27 +74,26 @@ public class WolfDen implements NonBlocking {
         }
 
         int newWolvesCount = 0;
+        int potentialNewWolves = Math.min(maxNewWolves, connectedWolves.size() / 2);
 
-        while (newWolvesCount < maxNewWolves && connectedWolves.size() >= 2) {
-            System.out.println("Wolves are reproducing in the den.");
+        Random random = new Random();
 
-            Location newLocation = findSuitableLocation(world);
-            if (newLocation != null && world.isTileEmpty(newLocation)) {
-                Wolf newWolf = new Wolf(world, newLocation, program);
-                try {
-                    world.add(newWolf);
-                    System.out.println("A new wolf was born at " + newLocation);
+        for (int i = 0; i < potentialNewWolves; i++) {
+            // Kun reproducerer med en chance (f.eks., 50%)
+            if (random.nextBoolean()) {
+                System.out.println("Wolves are attempting to reproduce in the den.");
+
+                Location newLocation = findSuitableLocation(world);
+                if (newLocation != null) {
+                    Wolf newWolf = new Wolf(world, newLocation, program);
+                    addWolf(newWolf);
+                    System.out.println("A new wolf was born in the den.");
                     newWolvesCount++;
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Failed to add a new wolf at location " + newLocation + ": " + e.getMessage());
                 }
-            } else {
-                System.out.println("No suitable location found. Ending reproduction.");
-                break;
             }
         }
 
-        hasReproduced = true; // Markér som reproduceret
+        hasReproduced = true; // Marker som reproduceret
         System.out.println("Reproduction cycle completed. Total new wolves: " + newWolvesCount);
     }
 
