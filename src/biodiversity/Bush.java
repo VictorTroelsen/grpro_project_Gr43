@@ -12,20 +12,18 @@ import java.util.Random;
 public class Bush implements Actor {
     private Location location;
     private World world;
-    private int berries;
-    private static final int MAX_BERRIES = 10;
-    private boolean hasBerries;
-    private boolean isEaten; // Indikerer om busken er blevet spist
-    private Program program;
+    private int berries; // Antallet af bær busken har
+    private static final int MAX_BERRIES = 10; // Maksimalt antal bær busken kan have
+    private boolean hasBerries; // Indikerer om busken har bær
+    private Program program; // Reference til programmet for display information
 
     public Bush(World world, Location initialLocation, Program program) {
         this.world = world;
         this.location = initialLocation;
         this.program = program;
-        this.berries = new Random().nextInt(MAX_BERRIES) + 1;
+        this.berries = new Random().nextInt(MAX_BERRIES) + 1; // Start med et tilfældigt antal bær
         this.hasBerries = berries > 0;
-        this.isEaten = false;
-        updateDisplay();
+        updateDisplay(); // Initial visuel repræsentation
         placeBush(initialLocation);
     }
 
@@ -42,33 +40,26 @@ public class Bush implements Actor {
         int berriesPicked = Math.min(amount, berries);
         berries -= berriesPicked;
         hasBerries = berries > 0;
-        updateDisplay();
+        updateDisplay(); // Opdater visuel repræsentation
         System.out.println(berriesPicked + " berries picked from bush at: " + location);
         return berriesPicked;
     }
 
-    public void markAsEaten() {
-        isEaten = true;
-        hasBerries = false;
-        updateDisplay();
-    }
-
     private void updateDisplay() {
         String imageName = hasBerries ? "bush-berries" : "bush";
-        DisplayInformation displayInformation = new DisplayInformation(Color.BLACK, imageName);
+        DisplayInformation displayInformation = new DisplayInformation(Color.BLACK, "bush-berries");
         program.setDisplayInformation(Bush.class, displayInformation);
         System.out.println("Bush display updated to: " + imageName);
     }
 
     @Override
     public void act(World world) {
-        if (isEaten) {
-            isEaten = false;
+        // Regenerer bær næste dag
+        if (!hasBerries && berries < MAX_BERRIES) {
             berries = MAX_BERRIES;
             hasBerries = true;
-            placeBush(location); // Genplacér busken
-            updateDisplay();
-            System.out.println("Bush at " + location + " has regrown.");
+            updateDisplay(); // Opdater visuel repræsentation
+            System.out.println("Bush at " + location + " regenerated berries.");
         }
     }
 }

@@ -67,7 +67,7 @@ public class Rabbit extends Animal {//implements Actor {
         energy -= 2 * age;
         if (world.getTile(location) instanceof Grass) {
             energy += 20;
-            //System.out.println("Dyr.Rabbit ate grass at location: " + location);
+            System.out.println("Dyr.Rabbit ate grass at location: " + location);
         }
         checkAndUpdateLocation();
     }
@@ -93,7 +93,7 @@ public class Rabbit extends Animal {//implements Actor {
             Location babyLocation = findEmptyAdjacentLocation();
             if (babyLocation != null) {
                 Rabbit baby = new Rabbit(world, babyLocation, program);
-                //System.out.println(this + " reproduced at location: " + babyLocation);
+                System.out.println(this + " reproduced at location: " + babyLocation);
                 energy -= 15;
             }
         }
@@ -116,7 +116,7 @@ public class Rabbit extends Animal {//implements Actor {
                         program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small-sleeping"));
 
 
-                        //System.out.println("Dyr.Rabbit moved to burrow at location: " + burrowLocation);
+                        System.out.println("Dyr.Rabbit moved to burrow at location: " + burrowLocation);
                     } catch (IllegalArgumentException e) {
                         System.out.println("Move to burrow failed: " + e.getMessage());
                         sleepOutside();
@@ -128,7 +128,7 @@ public class Rabbit extends Animal {//implements Actor {
 
     private void sleepOutside() {
         program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small-sleeping"));
-        //System.out.println("Dyr.Rabbit is sleeping outside at location: " + location);
+        System.out.println("Dyr.Rabbit is sleeping outside at location: " + location);
     }
 
     private void leaveBurrow() {
@@ -144,7 +144,7 @@ public class Rabbit extends Animal {//implements Actor {
                 program.setDisplayInformation(Rabbit.class, new DisplayInformation(Color.GRAY,"rabbit-small"));
 
 
-                //System.out.println("Dyr.Rabbit left burrow and moved to location: " + exitLocation);
+                System.out.println("Dyr.Rabbit left burrow and moved to location: " + exitLocation);
             } catch (IllegalArgumentException e) {
                 System.out.println("Leaving burrow failed: " + e.getMessage());
             }
@@ -167,13 +167,13 @@ public class Rabbit extends Animal {//implements Actor {
                     program.setDisplayInformation(RabbitHole.class, displayInformation);
 
                     energy -= 10;
-                    //System.out.println("Dyr.Rabbit dug a new hole at location: " + loc);
+                    System.out.println("Dyr.Rabbit dug a new hole at location: " + loc);
                     break;
                 }
             }
 
             if (homeHole == null) {
-                //System.out.println("Dyr.Rabbit could not find a nearby location to dig a hole.");
+                System.out.println("Dyr.Rabbit could not find a nearby location to dig a hole.");
             }
         }
     }
@@ -185,7 +185,7 @@ public class Rabbit extends Animal {//implements Actor {
             Object tileContent = world.getNonBlocking(loc);
             if (tileContent instanceof Grass) {
                 energy += 30; // Kaninen får energi
-                //System.out.println("Dyr.Rabbit ate grass at location: " + location);
+                System.out.println("Dyr.Rabbit ate grass at location: " + location);
                 world.delete(tileContent); // Fjern græsset fra verden
                 break;
             }

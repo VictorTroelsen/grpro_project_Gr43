@@ -7,7 +7,7 @@ import itumulator.world.World;
 
 import java.util.Set;
 
-abstract class Carnivore extends Animal {
+class Carnivore extends Animal {
 
     public Carnivore(World world, Location initiallocation, Program program) {
         super(world, initiallocation, program);
@@ -17,8 +17,6 @@ abstract class Carnivore extends Animal {
     protected boolean canHunt(Object prey) {
         return prey instanceof Animal && !(prey instanceof NonBlocking) && !(prey.getClass().equals(this.getClass()));
     }
-
-    public abstract void act(World world);
 
     protected void hunt() {
         // Hent omkringliggende felter i nærheden af ulvens nuværende position

@@ -1,324 +1,195 @@
-package animals;
+/*package animals;
 
+import actions.WolfDen;
+import biodiversity.Grass;
 import itumulator.executable.DisplayInformation;
 import itumulator.executable.Program;
-import itumulator.world.World;
 import itumulator.world.Location;
 import itumulator.world.NonBlocking;
-//import actions.WolfDenPrøve;
-//import actions.PackManager;
+import itumulator.world.World;
 
 import java.awt.*;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
 
-
-/*public class WolfPrøve extends Carnivore {
-    public static WolfPrøve alphaWolf;
-    private static Set<WolfPrøve> pack = new HashSet<>();
-    private final boolean isPlaced;
-    private WolfDenPrøve den;
+public class Wolf extends Carnivore {
+    private Set<Wolf> pack = new HashSet<>();
+    private WolfDen den;
     private Location location;
-    private WolfPrøve[] wolves;
-    private boolean isHidden;
 
-    public WolfPrøve(World world, Location initiallocation, Program program) {
-        super(world, initiallocation, program);
-        this.location = initiallocation;
-        this.isPlaced = placeAnimal(initiallocation);
+    public Wolf(World world, Location initialLocation, Program program) {
+        super(world, initialLocation, program);
+        this.age = 0;
         this.energy = 120;
-        this.isHidden = false;
-        if (alphaWolf == null) {
-            alphaWolf = this;
-            PackManager.createNewPack(this);
+        this.isPlaced = placeAnimal(initialLocation);
+
+        if (!isPlaced || initialLocation == null) {
+            System.err.println("Failed to place wolf. Location is null or placement failed.");
         } else {
-            PackManager.addWolfToPack(this, alphaWolf);
-            this.pack = PackManager.getPack(this);
+            this.location = initialLocation;
         }
     }
 
+    // Handlinger som en ulv skal udføre
+    @Override
     public void act(World world) {
-        System.out.println("Acting Wolf: " + this + ", Current pack size: " + pack.size());
+        if (isLeader()) {
+            Location newDestination = chooseNewDestination();
+            setPackDestination(newDestination);
+        }
 
-        /*if (!world.contains(this) || world.getLocation(this) == null) {
-            System.err.println(this + " is not correctly placed in the world, skipping action.");
+        move(); // Kald superklassens move metode
+
+        Set<Wolf> newWolves = findNearbyWolves();
+        joinOrCreatePack(newWolves);
+
+        for (Wolf otherWolf : newWolves) {
+            fightOrJoinPack(otherWolf);
+        }
+
+        if (location == null) {
+            System.out.println("Warning: Wolf location is null, cannot perform actions.");
+            return;  // Afbryd videre handling hvis placeringen er null
+        }
+
+        // Eksempel på logik for hvordan ulven kan handle
+        if (shouldBuildDen(world, location)) {  // Betingelse for bygge hule
+            buildDen(world, location);
+        }
+
+        if (energy <= 0 || age == maximumAge()) {
+            dies();
+        }
+        energy -= 3;
+    }
+
+    private boolean isLeader() {
+        return !pack.isEmpty() && pack.iterator().next().equals(this);
+    }
+
+    private Set<Wolf> findNearbyWolves() {
+        Set<Wolf> nearbyWolves = new HashSet<>();
+        if (location == null) {
+            System.err.println("Warning: Wolf location is null, cannot find nearby wolves.");
+            return nearbyWolves;
+        }
+
+        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
+        if(surroundingTiles == null) {
+            System.err.println("Error retrieving surrounding tiles.");
+            return nearbyWolves;
+        }
+
+        for (Location loc : surroundingTiles) {
+            Object tileContent = world.getTile(loc);
+            if (tileContent instanceof Wolf && tileContent != this) {
+                nearbyWolves.add((Wolf) tileContent);
+            }
+        }
+        return nearbyWolves;
+    }
+
+    private Location chooseNewDestination() {
+        // Logik til at vælge en ny destination
+        return findEmptyAdjacentLocation();
+    }
+
+    public void setLocationInWorld(World world, Location newLocation) {
+        if (world == null || newLocation == null) {
+            System.err.println("Error: World or Location is null. Cannot set location.");
+            throw new IllegalArgumentException("World must not be null");
+        }
+
+        try {
+            world.setTile(newLocation, this);  // Flytter ulven til den nye placering i verden
+            this.location = newLocation;       // Opdatér ulvens interne placering
+        } catch (IllegalArgumentException e) {
+            System.out.println("Could not set tile: " + e.getMessage());
+        }
+    }
+
+    private void setPackDestination(Location destination) {
+        for (Wolf wolf : pack) {
+            wolf.setLocationInWorld(world, destination);
+        }
+    }
+
+    public void buildDen(World world, Location location) {
+        if (world == null || location == null) {
+            throw new IllegalArgumentException("World or location cannot be null.");
+        }
+
+        // Kontroller om flisen er egnet til brug
+        if (isTileSuitableForDen(world, location)) {
+            try {
+                world.setTile(location, this);  // Forsøg kun at sætte flisen, hvis den er klar
+                System.out.println(getClass().getSimpleName() + " built a new den at " + location);
+            } catch (IllegalArgumentException e) {
+                System.err.println("Failed to build den: " + e.getMessage());
+            }
+        } else {
+            System.err.println(getClass().getSimpleName() + " cannot build den - Tile is occupied or incompatible at: " + location);
+        }
+    }
+
+    private boolean shouldBuildDen(World world, Location location) {
+        // Logik for hvorvidt der burde bygges en hule
+        return !isTileOccupied(world, location);
+    }
+
+    private boolean isTileSuitableForDen(World world, Location location) {
+        Object existingContent = world.getTile(location);
+        // Tile kan kun indeholde selve ulven eller være tom
+        return existingContent == null || existingContent == this;
+    }
+
+    public void joinOrCreatePack(Set<Wolf> newWolves) {
+        if (newWolves.isEmpty()) {
             return;
         }
 
-        if (world.isDay()) {
-            // Handlinger om dagen
-            if (den != null) {
-                revealAtDay(world, location);  // Gør ulvene visuelt tilgængelige
-                digDen(den.getLocation());    // Dig den, hvis muligt
-            }
-            /*if (location != null && (den == null || !world.getLocation(den).equals(location))) {
-                coordinatePackMovement(world); // Bevæger pakken
-            }
-            if (energy < 120) {
-                hunt(); // Ulvene jager for energi
-            }
-        } else if (world.isNight()) {
-            // Handlinger om natten
-            if (den == null && pack.size() > 1) {
-                Location denLocation = findEmptyAdjacentLocation();
-                if (denLocation != null) {
-                    digDen(denLocation); // Gravning af en hule
-                }
-            }
-
-            hideAtNight(world);  // Skjul ulvene
-
-            if (energy > 70 && pack.size() > 1) {
-                int maxNewWolves = pack.size() / 2;
-                den.reproduce(world, program, maxNewWolves); // Reproduktion
-                energy -= 20; // Energiforbrug ved reproduktion
-            }
-        }
-
-        super.act(world);
-
-        if (energy <= 0 || age > maximumAge()) {
-            dies(); // Ulven dør hvis energi er 0 ell. alder overstiger max
-        }
-    }
-
-    @Override
-    protected void hunt() {
-        if (this.equals(alphaWolf)) {
-            // Kun alpha-ulven vælger bytte, resten følger alphaen
-            Set<Location> surroundingTiles = world.getSurroundingTiles(location, program.getSize() / 5);
-            for (Location loc : surroundingTiles) {
-                Object prey = world.getTile(loc);
-                if (prey instanceof Rabbit && canHunt(prey)) {
-                    System.out.println(this + " found prey to hunt at location: " + loc);
-                    try {
-                        world.delete(prey);
-                        System.out.println("prey at location " + loc + " has been eaten and deleted.");
-
-                        world.move(this, loc);
-                        location = loc;
-
-                        // Del energi mellem ulvene i pakken
-                        int energyShare = 100;
-                        for (WolfPrøve wolf : pack) {
-                            wolf.energy = Math.min(wolf.energy + energyShare, 120);
-                        }
-                        System.out.println(this + " moved to location " + loc + " after eating.");
-                    } catch (IllegalArgumentException e) {
-                        System.err.println("Error occurred while hunting for " + this + " at location: " + loc + ". " + e.getMessage());
-                    }
-                    break;
-                }
-            }
+        if (this.pack.isEmpty()) {
+            // Start ny pakke
+            this.pack.add(this);  // Inkluder den aktuelle ulv i pakken
+            this.pack.addAll(newWolves);
+            synchronizePackPackReferences();
+            System.out.println("New pack created.");
         } else {
-            // Flyt mod alphaen, hvis ikke alpha og den er på jagt
-            coordinatePackMovement(world);
+            // Udvid eksisterende pakke
+            this.pack.addAll(newWolves);
+            synchronizePackPackReferences();
+            System.out.println("Pack expanded.");
         }
     }
 
-    @Override
-    public int maximumAge() {
-        return 50;
-    }
-
-    @Override
-    protected boolean canHunt(Object prey) {
-        if (prey instanceof Bear) {
-            return getPackSize() >= 3;
-        } else return prey instanceof Rabbit;
-    }
-
-    @Override
-    public void dies() {
-        super.dies();
-
-        pack.remove(this);
-
-        PackManager.removeWolfFromPack(this);
-    }
-
-    public void coordinatePackMovement(World world) {
-        Location alphaLocation = getAlphaLocation();
-        for (WolfPrøve wolf : pack) {
-            if (!wolf.equals(alphaWolf) && wolf.distance(wolf.location, alphaLocation) > 2) {
-                wolf.moveToPack(alphaLocation);
-            }
+    private void synchronizePackPackReferences() {
+        for (Wolf wolf : pack) {
+            wolf.pack = this.pack; // Sikrer, at alle ulve deler samme pakke-reference
         }
     }
 
-    public boolean isPlaced() {
-        return isPlaced;
-    }
-
-    public int getPackSize() {
-        return pack.size();
-    }
-
-    public static Set<WolfPrøve> getCurrentPack() {
-        return alphaWolf != null ? PackManager.getPack(alphaWolf) : Collections.emptySet();
-    }
-
-    public static WolfPrøve getAlpha() {
-        return alphaWolf;
-    }
-
-    public Location getAlphaLocation() {
-        if (alphaWolf == null) {
-            chooseNewAlpha();
+    public boolean isTileOccupied(World world, Location location) {
+        if (world == null || location == null) {
+            throw new IllegalArgumentException("World or location cannot be null.");
         }
-        if (alphaWolf != null && world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
-            return world.getLocation(alphaWolf);
-        } else {
-            chooseNewAlpha();
-            if (alphaWolf != null && world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
-                return world.getLocation(alphaWolf);
-            } else {
-                throw new IllegalStateException("Ingen gyldig alpha ulv fundet i verdenen.");
-            }
-        }
+        // Tjek om der er en genstand på denne lokation
+        Object existingContent = world.getTile(location);
+        return existingContent != null;
     }
 
-
-    public void chooseNewAlpha() {
-        if (pack.isEmpty()) {
-            System.out.println("Pakken er tom, der kan ikke vælges en ny alpha.");
-            return; // Tidligere attempt at stoppe
-        }
-
-        Random random = new Random();
-        int randomIndex = random.nextInt(pack.size());
-        alphaWolf = pack.toArray(new WolfPrøve[0])[randomIndex];
-
-        if (world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
-            System.out.println("Ny alpha er valgt: " + alphaWolf);
-        } else {
-            System.out.println("Den valgte alpha er ikke korrekt placeret, forsøger at flytte.");
-        }
-    }
-
-
-    public void moveToPack(Location alphaLocation) {
-        if (location != null && world.contains(this) && world.isOnTile(this)) {
-
-            Set<Location> path = world.getSurroundingTiles(this.location);
-            Location bestMove = chooseBestMoveTowards(alphaLocation, path);
-
-            if (bestMove != null && world.isTileEmpty(bestMove)) {
-                world.move(this, bestMove);
-                this.location = bestMove;
-                PackManager.wolfLocations.put(this, bestMove);
-                System.out.println(this + " moved towards the pack leader at location: " + alphaLocation);
-            }
-        } else {
-            System.out.println("Cannot move as the wolf is not correctly placed on the map.");
-        }
-    }
-
-
-    private boolean isWithinRange(Location loc, Location target, int range) {
-        return distance(loc, target) <= range;
-    }
-
-    public int maxPacksize() {
-        return 5;
-    }
-
-    private Location chooseBestMoveTowards(Location target, Set<Location> options) {
-        return options.stream().min(Comparator.comparingInt(loc -> distance(loc, target))).orElse(null);
-    }
-
-    private int distance(Location a, Location b) {
-        return Math.abs(a.getX() - b.getX()) + Math.abs(a.getY() - b.getY());
-    }
-
-    public void digDen(Location location) {
-        if (den == null && energy >= 20) {
-            if (world.getTile(location) == null || world.getTile(location) instanceof NonBlocking) {
-                // Check for an alternative tile if needed
-                try {
-                    // Attempt to set the tile
-                    den = new WolfDenPrøve(location);
-                    den.addWolf(this);
-                    world.setTile(location, den); // Safely attempting to set the tile
-
-                    // Set visual information for wolf den
-                    DisplayInformation displayInformation = new DisplayInformation(Color.GRAY, "hole");
-                    program.setDisplayInformation(WolfDenPrøve.class, displayInformation);
-
-                    energy -= 20; // Adjust energy consumption
-                    System.out.println(this + " has dug a new den at location: " + location);
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Failed digging den at location: " + location + ". " + e.getMessage());
-                    // Consider alternative options if needed, e.g., try another location
+    public void fightOrJoinPack(Wolf otherWolf) {
+        if (!pack.contains(otherWolf)) {
+            // Implementer logik for kamp eller sammenføjning
+            if (new Random().nextBoolean()) {
+                if (this.energy > otherWolf.energy) {
+                    otherWolf.dies();
+                } else {
+                    this.dies();
                 }
             } else {
-                System.out.println("Could not dig den at location: " + location + " because it's occupied by a non-blocking element.");
-                // Consider finding a new spot if desired
-            }
-        }
-    }
-
-    public void hideAtNight(World world) {
-        if (world.contains(this) && world.isOnTile(this)) {
-            world.remove(this);  // Fjern ulven fra kortet
-            this.isHidden = true;  // Marker ulven som skjult
-            System.out.println(this + " is now hidden at night.");
-        }
-    }
-
-    public void revealAtDay(World world, Location spot) {
-        if (isHidden && spot != null && world.isTileEmpty(spot)) {
-            world.setTile(spot, this);  // Tilføj ulven tilbage på kortet
-            this.isHidden = false;  // Marker ulven som ikke skjult
-            this.location = spot;
-            System.out.println(this + " has reappeared at location: " + spot);
-        }
-    }
-
-    public Location getWolfLocation() {
-        return location;
-    }
-
-    public void setDen(WolfDenPrøve den) {
-        this.den = den;
-    }
-
-    public void relocate(World world, Location newLocation, Program program) {
-        this.location = newLocation;
-        world.setTile(newLocation, this);
-    }
-
-    public static Set<WolfPrøve> getPack() {
-        return pack;
-    }
-
-    public void moveToDen(World world) {
-        if (den != null) {
-            Location denLocation = den.getLocation();
-            try {
-                if (!location.equals(denLocation) && world.isOnTile(this)) {
-                    world.move(this, denLocation);
-                    this.location = denLocation;
-                    den.addWolf(this);
-                    System.out.println(this + " moved to den at location: " + denLocation);
-                }
-
-            } catch (IllegalArgumentException e) {
-                System.err.println("Move to den failed: " + e.getMessage());
-            }
-        } else {
-            System.err.println("No den found for " + this + " to move to.");
-        }
-    }
-
-
-    public void leaveDen(World world) {
-        if (den != null) {
-            try {
-                Location exitLocation = den.getLocation();
-                program.setDisplayInformation(WolfPrøve.class, new DisplayInformation(Color.GRAY, "wolf"));
-                System.out.println(this + " left den and moved to location: " + exitLocation);
-            } catch (IllegalArgumentException e) {
-                System.err.println("Leaving den failed: " + e.getMessage());
+                this.pack.add(otherWolf);
+                otherWolf.pack.addAll(this.pack);
             }
         }
     }
