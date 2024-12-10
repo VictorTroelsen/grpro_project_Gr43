@@ -10,8 +10,11 @@ import java.util.*;
 import java.awt.Color;
 
 import actions.WolfDen;
+//import actions.WolfDenPrøve;
+import actions.WolfPack;
 import animals.Bear;
 import animals.Wolf;
+//import animals.WolfPrøve;
 import animals.Rabbit;
 import actions.RabbitHole;
 import biodiversity.Bush;
@@ -57,6 +60,8 @@ public class FileReaderUtil {
             p.setDisplayInformation(Wolf.class, new DisplayInformation(Color.BLUE, "wolf"));
             p.setDisplayInformation(WolfDen.class, new DisplayInformation(Color.BLACK, "hole"));
             p.setDisplayInformation(Bush.class, new DisplayInformation(Color.PINK, "bush"));
+            p.setDisplayInformation(SmallCarcass.class, new DisplayInformation(Color.ORANGE, "carcass-small"));
+            p.setDisplayInformation(NormalCarcass.class, new DisplayInformation(Color.DARK_GRAY, "carcass"));
 
             logWorldState(w, "Initial world state");
 
@@ -161,8 +166,9 @@ public class FileReaderUtil {
 
                             break;
                         case "wolf":
-                            Wolf wolf = new Wolf(w,location,p);
-                            //actorManager.addActor(wolf, location);
+                            int age = 0;
+                            Wolf wolf = new Wolf(w, location, p, age, null); // Vi sender ikke en specifik WolfPack
+                            // actorManager.addActor(wolf, location); // Tilføj ulven til aktørhåndteringen, hvis nødvendigt
                             if (wolf.isPlaced()) {
                                 addedCount++;
                             }

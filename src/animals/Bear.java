@@ -1,9 +1,9 @@
 package animals;
 
+import biodiversity.Bush;
 import itumulator.executable.Program;
 import itumulator.world.Location;
 import itumulator.world.World;
-import biodiversity.Bush;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,54 +25,80 @@ public class Bear extends Carnivore {
 
     @Override
     public void act(World world) {
-        moveWithinTerritory();
-        if (world.isDay() && energy <= 70) {
+        // Bjørnen bevæger sig og mister energi
+        move();
+        energy -= 5; // Hver bevægelse koster energi
+
+        // Bjørnen jager, hvis energien er lav
+        if (energy <= 50) {
             hunt();
         }
-        updateEnergy();
 
+        // Tjek om bjørnen skal dø
         if (energy <= 0) {
             dies();
         }
     }
 
-    @Override
-    protected boolean canHunt(Object prey) {
-        // Bjørnen kan jage kaniner og ulve
-        return prey instanceof Rabbit || prey instanceof Wolf;
+    public void move() {
+        if (!world.isOnTile(this)) {
+            System.out.println("Bear is not on any tile.");
+            return;
+        }
+
+        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
+        List<Location> validLocations = new ArrayList<>();
+
+        for (Location loc : surroundingTiles) {
+            if (isTileEmptyOrNonBlocking(loc) && isWithinTerritory(loc)) {
+                validLocations.add(loc);
+            }
+        }
+
+        if (!validLocations.isEmpty()) {
+            Random random = new Random();
+            Location newLocation = validLocations.get(random.nextInt(validLocations.size()));
+
+            try {
+                world.move(this, newLocation);
+                location = newLocation;
+                System.out.println("Bear moved to location: " + location);
+            } catch (IllegalArgumentException e) {
+                System.out.println("Move blocked: " + e.getMessage());
+            }
+        } else {
+            System.out.println("Bear could not find a valid move.");
+        }
+    }
+
+    private boolean isWithinTerritory(Location location) {
+        int dx = location.getX() - territoryCenter.getX();
+        int dy = location.getY() - territoryCenter.getY();
+        return dx * dx + dy * dy <= TERRITORY_RADIUS * TERRITORY_RADIUS; // Pythagoras' sætning
     }
 
     @Override
     protected void hunt() {
-        Set<Location> surroundingTiles = world.getSurroundingTiles(location);
+        Set<Location> surroundingTiles = world.getSurroundingTiles(location, TERRITORY_RADIUS);
         for (Location loc : surroundingTiles) {
             Object prey = world.getTile(loc);
-            if (canHunt(prey)) {
-                System.out.println(this + " found prey to hunt at location: " + loc);
+            if (prey instanceof Rabbit) {
+                System.out.println(this + " found a Rabbit at location: " + loc);
                 try {
-                    world.delete(prey); // Fjern byttet fra verdenen
-                    System.out.println(prey + " at location " + loc + " has been eaten and deleted.");
-
-                    // Flyt bjørnen til byttets position
-                    world.move(this, loc);
+                    world.delete(prey); // Fjern kaninen fra verdenen
+                    world.move(this, loc); // Flyt bjørnen til kaninens placering
                     location = loc;
 
-                    // Tilføj energi afhængigt af byttets type
-                    if (prey instanceof Rabbit) {
-                        energy += 50; // Kaniner giver mere energi
-                    } else if (prey instanceof Wolf) {
-                        energy += 75; // Ulve giver endnu mere energi
-                    }
-
-                    System.out.println(this + " moved to location " + loc + " after eating.");
-
+                    energy += 50; // Kaninen giver energi
+                    System.out.println(this + " ate a Rabbit and gained energy.");
+                    return; // Stop jagten efter at have fundet bytte
                 } catch (IllegalArgumentException e) {
-                    System.err.println("Error occurred while hunting at location: " + loc + ". " + e.getMessage());
+                    System.err.println("Error while hunting: " + e.getMessage());
                 }
             }
         }
         System.out.println("No prey found near location: " + location);
-        forageBerries();
+        forageBerries(); // Hvis ingen kaniner findes, så fourager bær
     }
 
     private void forageBerries() {
@@ -83,43 +109,21 @@ public class Bear extends Carnivore {
                 Bush bush = (Bush) tileContent;
                 int berriesPicked = bush.pickBerries(3); // Bjørnen plukker fx 3 bær
                 energy += berriesPicked * 5; // Bær giver mindre energi end kød
-                System.out.println("Bear foraged " + berriesPicked + " berries from bush at " + loc);
+
+                // Fjern busken og opdater dens tilstand
+                world.delete(bush);
+                bush.markAsEaten();
+
+                System.out.println("Bear foraged " + berriesPicked + " berries at location: " + loc);
                 return;
             }
         }
         System.out.println("No berries found near location: " + location);
     }
 
-    private void moveWithinTerritory() {
-        if (!world.isOnTile(this)) {
-            System.out.println("Bear is not on any tile.");
-            return;
-        }
-
-        Set<Location> surroundingTiles = world.getSurroundingTiles(location); // Hent nærliggende felter
-        List<Location> validLocations = new ArrayList<>();
-
-        // Find gyldige nærliggende felter
-        for (Location loc : surroundingTiles) {
-            if (isTileEmptyOrNonBlocking(loc)) {
-                validLocations.add(loc);
-            }
-        }
-
-        // Hvis der er gyldige nærliggende felter, vælg tilfældigt ét
-        if (!validLocations.isEmpty()) {
-            Random random = new Random();
-            Location newLocation = validLocations.get(random.nextInt(validLocations.size()));
-
-            try {
-                world.move(this, newLocation);
-                location = newLocation;
-                System.out.println("Bear moved to nearby location: " + location);
-            } catch (IllegalArgumentException e) {
-                System.out.println("Move blocked: " + e.getMessage());
-            }
-        } else {
-            System.out.println("Bear could not find a valid nearby move.");
-        }
+    @Override
+    public void dies() {
+        System.out.println("Bear died at location: " + location);
+        world.delete(this);
     }
 }
