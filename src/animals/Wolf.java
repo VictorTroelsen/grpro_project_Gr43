@@ -1,287 +1,258 @@
 package animals;
 
-import itumulator.executable.DisplayInformation;
-import itumulator.executable.Program;
-import itumulator.world.World;
-import itumulator.world.Location;
-import itumulator.world.NonBlocking;
 import actions.WolfDen;
-import actions.PackManager;
+import itumulator.executable.Program;
+import itumulator.world.Location;
+import itumulator.world.World;
+import actions.WolfPack;
 
-import java.awt.*;
-import java.util.*;
-
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Wolf extends Carnivore{
-    public static Wolf alphaWolf;
-    private static Set<Wolf> pack = new HashSet<>();
-    private final boolean isPlaced;
-    private WolfDen den;
-    private Location location;
-    private Wolf[] wolves;
+    private static final AtomicInteger ID_GENERATOR = new AtomicInteger();
+    private final int id;
+    private int age;
+    private int energy;
+    private final World world;
+    private WolfPack wolfPack;
 
-    public Wolf(World world, Location initiallocation, Program program) {
-        super(world,initiallocation,program);
-        this.location = initiallocation;
-        this.isPlaced = placeAnimal(initiallocation);
-        this.energy = 120;
-        if (alphaWolf == null) {
-            alphaWolf = this;
-            PackManager.createNewPack(this);
-        } else {
-            PackManager.addWolfToPack(this, alphaWolf);
-            this.pack = PackManager.getPack(this);
+
+    public Wolf(World world, Location initialLocation, Program program, int age, WolfPack wolfPack) {
+        super(world, initialLocation, program);
+        this.id = ID_GENERATOR.incrementAndGet();
+        this.age = age;
+        this.energy = 100;
+        this.isPlaced = placeAnimal(initialLocation);
+        this.world = world;
+        this.wolfPack = wolfPack;
+
+        if (wolfPack == null) {
+            System.out.println("Wolf #" + id + " is currently not part of any pack.");
         }
     }
 
+
+    @Override
     public void act(World world) {
-        System.out.println("Acting Wolf: " + this + ", Current pack size: " + pack.size());
-        if (world.isDay()) {
-            if (den != null) {
-                leaveDen(world);
+        if (this.energy <= 0 || !world.contains(this)) {
+            System.out.println("[DEBUG] Wolf #" + this.getId() + " is dead or not in the world. Skipping turn.");
+            return; // Stop alle handlinger for døde ulve.
+        }
+
+        System.out.println("[DEBUG] Wolf #" + this.getId() + " starting act. Energy: " + this.getEnergy());
+
+        // Natlige aktiviteter
+        if (world.isNight()) {
+            System.out.println("[DEBUG] It's night. Wolf #" + this.getId() + " is acting accordingly.");
+
+            if (wolfPack != null && wolfPack.hasDen() && wolfPack.isAlpha(this)) {
+                WolfDen den = wolfPack.getDen();
+
+                // Alpha sørger for, at ulvene restituerer tæt på hulen
+                den.restNearDen();
+
+                // Alpha forsøger at reproducere i nærheden af hulen
+                den.reproduce();
             }
-            coordinatePackMovement(world);
-            System.out.println(this + " energy before hunt: " + energy);
-            if (energy < 120) {
-                hunt();
+            decreaseEnergy(); // Energi falder lidt om natten
+            return; // Spring dagens handlinger over
+        }
+
+        // Daglige aktiviteter (tilføjelse til eksisterende logik)
+        if (this.wolfPack == null) {
+            System.out.println("[DEBUG] Wolf #" + this.getId() + " has no pack, continuing solo activities.");
+            hunt(); // Individuel handling
+        } else if (wolfPack.isAlpha(this)) {
+            System.out.println("[DEBUG] Wolf #" + this.getId() + " is alpha, acting as alpha.");
+            actAsAlpha();
+        } else {
+            hunt(); // Ikke-alpha ulve jager solo
+        }
+
+        decreaseEnergy();
+        System.out.println("[DEBUG] Wolf #" + this.getId() + " finished act.");
+    }
+
+    private Wolf findAlpha() {
+        for (Wolf alpha : wolfPack.getAllAlphas()) {
+            if (wolfPack.getPackMembers(alpha).contains(this) || alpha == this) {
+                return alpha; // Returner flokkens alpha
             }
-        } else if (world.isNight()) {
-            if (den == null && pack.size() > 1) {
-                Location denLocation = findEmptyAdjacentLocation();
-                if (denLocation != null) {
-                    digDen(denLocation);
+        }
+        return null; // Ikke i nogen flok
+    }
+
+    private void actAsAlpha() {
+        // Første tjek: Er alpha stadig i verdenen?
+        if (!world.contains(this)) {
+            System.out.println("[DEBUG] Alpha Wolf #" + id + " is no longer in the world. Skipping movePack.");
+            return; // Afbryd handlingen, hvis ulven ikke længere er i verdenen
+        }
+
+        // Hvis ingen WolfDen eksisterer for flokken, opret en ny hule på den nuværende placering
+        if (wolfPack != null && !wolfPack.hasDen()) {
+            createDenForPack(); // Opret hulen
+        }
+
+        // Flyt flokken til en ny lokation
+        Location newLocation = calculateNewLocation();
+        wolfPack.movePack(this, newLocation, world);
+
+        // Flokken udfører en fælles jagt
+        huntWithPack();
+    }
+
+    // Metode til at oprette en hule til flokken
+    private void createDenForPack() {
+        Location currentLocation = world.getLocation(this); // Alpha'ens nuværende placering
+        if (currentLocation != null) {
+            // Opret hulen
+            WolfDen den = new WolfDen(world, currentLocation, wolfPack, program);
+            wolfPack.setDen(den); // Tilføj hulen til flokken
+            world.setTile(currentLocation, den); // Tilføj hulen til verdenen
+
+            System.out.println("[DEBUG] Wolf #" + id + " has dug a den for the pack at location: " + currentLocation);
+        } else {
+            System.out.println("[DEBUG] Wolf #" + id + " could not create a den because no location was found.");
+        }
+    }
+
+    private void huntWithPack() {
+        Set<Wolf> packMembers = wolfPack.getPackMembers(this);
+
+        // Jagt sammen med flokken: prioritér større bytte som bjørne
+        if (!packMembers.isEmpty()) {
+            System.out.println("Alpha Wolf #" + id + " is hunting with " + packMembers.size() + " pack members!");
+
+            Location currentLocation = world.getLocation(this);
+            Set<Location> tiles = world.getSurroundingTiles(currentLocation, 5); // Udvid radius
+            Set<Bear> bears = world.getAll(Bear.class, tiles);
+
+            if (!bears.isEmpty() && packMembers.size() >= 3) { // Minimum 3 ulve til flokken for at angribe bjørn
+                Bear bear = bears.iterator().next(); // Første bjørn
+                world.remove(bear); // Fjern bjørnen fra verden
+                this.energy += 100; // Alpha får mere energi
+                System.out.println("Wolf Pack led by #" + id + " hunted a bear!");
+            } else {
+                System.out.println("Not enough wolves to hunt larger prey. Continuing individual hunts...");
+                hunt(); // Fallback til individuel jagt
+            }
+        } else {
+            hunt(); // Ingen pack = individuel jagt
+        }
+    }
+
+    private Location calculateNewLocation() {
+        // Simuler en bevægelse i en ny retning
+        Location currentLocation = world.getLocation(this);
+        Set<Location> nearbyEmpty = world.getEmptySurroundingTiles(currentLocation);
+        return nearbyEmpty.stream().findFirst().orElse(currentLocation); // Flyt til en tilfældig ledig lokation
+    }
+
+    private void decreaseEnergy() {
+        this.energy -= 10; // Reducerer energi efter hver handling
+
+        if (this.energy <= 0) {
+            System.out.println("Wolf #" + id + " has died due to exhaustion.");
+            world.remove(this); // Fjern ulven fra verdenen
+
+            if (wolfPack != null && wolfPack.isAlpha(this)) { // Kontroller, om wolfPack ikke er null
+                Set<Wolf> packMembers = wolfPack.getPackMembers(this);
+
+                if (!packMembers.isEmpty()) {
+                    Wolf newAlpha = packMembers.iterator().next(); // Vælg ny alpha
+                    wolfPack.createPack(newAlpha); // Opret ny pack med ny alpha
+                    packMembers.remove(newAlpha); // Fjern den nye alpha fra medlemstlisten
+
+                    for (Wolf member : packMembers) {
+                        wolfPack.addToPack(newAlpha, member); // Tilføj de resterende medlemmer til den nye alpha
+                    }
+
+                    System.out.println("Wolf #" + newAlpha.getId() + " is the new alpha!");
+                } else {
+                    wolfPack.disbandPack(this); // Opløs flokken, hvis ingen medlemmer er tilbage
                 }
-            }
-            // Om natten bevæger sig til hulen og gemmer sig
-            moveToDen(world);
-            den.hideWolves(world);
-            if (energy > 70 && pack.size() > 1) {
-                int maxNewWolves = pack.size() / 2;
-                den.reproduce(world, program, maxNewWolves);
-                energy -= 20;
+            } else {
+                System.out.println("Wolf #" + id + " has no wolfPack or is not the alpha.");
             }
         }
+    }
 
-        super.act(world);
+    public int getId() {
+        return id;
+    }
 
-        if (energy <= 0 || age > maximumAge()) {
-            dies();
-        }
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public int getEnergy() {
+        return energy;
+    }
+
+    public void setEnergy(int energy) {
+        this.energy = energy;
     }
 
     @Override
     protected void hunt() {
-        if (this.equals(alphaWolf)) {
-            // Kun alpha-ulven vælger bytte, resten følger alphaen
-            Set<Location> surroundingTiles = world.getSurroundingTiles(location, program.getSize() / 5);
-            for (Location loc : surroundingTiles) {
-                Object prey = world.getTile(loc);
-                if (prey instanceof Rabbit && canHunt(prey)) {
-                    System.out.println(this + " found prey to hunt at location: " + loc);
-                    try {
-                        world.delete(prey);
-                        System.out.println("prey at location " + loc + " has been eaten and deleted.");
+        System.out.println("Wolf ID #" + id + " is hunting...");
 
-                        world.move(this, loc);
-                        location = loc;
+        Location location = world.getLocation(this);
 
-                        // Del energi mellem ulvene i pakken
-                        int energyShare = 100;
-                        for (Wolf wolf : pack) {
-                            wolf.energy = Math.min(wolf.energy + energyShare, 120);
-                        }
-                        System.out.println(this + " moved to location " + loc + " after eating.");
-                    } catch (IllegalArgumentException e) {
-                        System.err.println("Error occurred while hunting for " + this + " at location: " + loc + ". " + e.getMessage());
-                    }
-                    break;
-                }
-            }
+        Set<Location> surroundingTiles = world.getSurroundingTiles(location, 3);
+
+        Set<Rabbit> rabbits = world.getAll(Rabbit.class, surroundingTiles);
+
+        Set<Bear> bears = world.getAll(Bear.class, surroundingTiles);
+
+        Set<Wolf> wolves = world.getAll(Wolf.class, surroundingTiles);
+
+        if(!rabbits.isEmpty()) {
+            Rabbit rabbit = rabbits.iterator().next();
+            Location rabbitLocation = world.getLocation(rabbit);
+            world.remove(rabbit);
+            this.energy += 50;
+            System.out.println("Wolf ID #" + id + " ate a rabbit and gained energy! Current energy: " + energy);
+        }
+
+        else if (!bears.isEmpty() && wolves.size() >= 3) {
+            Bear bear = bears.iterator().next();
+            Location bearLocation = world.getLocation(bear);
+            world.remove(bear);
+            this.energy += 75;
+            System.out.println("Wolf ID #" + id + " ate a bear and gained energy! Current energy: " + energy);
+        }
+
+        else {
+            moveRandomly();
+        }
+
+    }
+
+    private void moveRandomly() {
+        Set<Location> emptyLocations = world.getEmptySurroundingTiles(world.getLocation(this));
+        if (!emptyLocations.isEmpty()) {
+            // Flyt til en tilfældig lokation
+            Location newLocation = emptyLocations.iterator().next(); // Tag en tilfældig ledig position
+            world.move(this, newLocation);
+            System.out.println("Wolf ID #" + id + " moved to a new location: " + newLocation);
         } else {
-            // Flyt mod alphaen, hvis ikke alpha og den er på jagt
-            coordinatePackMovement(world);
+            System.out.println("Wolf ID #" + id + " cannot move because there are no empty tiles nearby.");
         }
     }
+
+
+
+
 
     @Override
-    public int maximumAge() {
-        return 50;
+    public String toString() {
+        return "Wolf{id=" + id + ", age=" + age + ", energy=" + energy + "}";
     }
-
-    @Override
-    protected boolean canHunt(Object prey) {
-        if (prey instanceof Bear) {
-            return getPackSize() >= 3;
-        } else return prey instanceof Rabbit;
-    }
-
-    @Override
-    public void dies() {
-        super.dies();
-
-        pack.remove(this);
-
-        PackManager.removeWolfFromPack(this);
-    }
-
-    public void coordinatePackMovement(World world) {
-        Location alphaLocation = getAlphaLocation();
-        for (Wolf wolf : pack) {
-            if (!wolf.equals(alphaWolf) && wolf.distance(wolf.location, alphaLocation) > 2) {
-                wolf.moveToPack(alphaLocation);
-            }
-        }
-    }
-
-    public boolean isPlaced() {
-        return isPlaced;
-    }
-
-    public int getPackSize() {
-        return pack.size();
-    }
-
-    public static Set<Wolf> getCurrentPack() {
-        return alphaWolf != null ? PackManager.getPack(alphaWolf) : Collections.emptySet();
-    }
-
-    public static Wolf getAlpha() {
-        return alphaWolf;
-    }
-
-    public Location getAlphaLocation() {
-        if (alphaWolf == null) {
-            chooseNewAlpha();
-        }
-        if (alphaWolf != null && world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
-            return world.getLocation(alphaWolf);
-        } else {
-            chooseNewAlpha();
-            if (alphaWolf != null && world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
-                return world.getLocation(alphaWolf);
-            } else {
-                throw new IllegalStateException("Ingen gyldig alpha ulv fundet i verdenen.");
-            }
-        }
-    }
-
-
-    public void chooseNewAlpha() {
-        if (pack.isEmpty()) {
-            System.out.println("Pakken er tom, der kan ikke vælges en ny alpha.");
-            return; // Tidligere attempt at stoppe
-        }
-
-        Random random = new Random();
-        int randomIndex = random.nextInt(pack.size());
-        alphaWolf = pack.toArray(new Wolf[0])[randomIndex];
-
-        if(world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
-            System.out.println("Ny alpha er valgt: " + alphaWolf);
-        } else {
-            System.out.println("Den valgte alpha er ikke korrekt placeret, forsøger at flytte.");
-        }
-    }
-
-
-    public void moveToPack(Location alphaLocation) {
-        Set<Location> path = world.getSurroundingTiles(this.location);
-        Location bestMove = chooseBestMoveTowards(alphaLocation, path);
-
-        if (bestMove != null && world.isTileEmpty(bestMove)) {
-            world.move(this, bestMove);
-            this.location = bestMove;
-
-            System.out.println(this + " moved towards the pack leader at location: " + alphaLocation);
-        }
-    }
-
-    private boolean isWithinRange(Location loc, Location target, int range) {
-        return distance(loc, target) <= range;
-    }
-
-    public int maxPacksize() {
-        return 5;
-    }
-
-    private Location chooseBestMoveTowards(Location target, Set<Location> options) {
-        return options.stream().min(Comparator.comparingInt(loc -> distance(loc, target))).orElse(null);
-    }
-
-    private int distance (Location a, Location b) {
-        return Math.abs(a.getX() - b.getX()) + Math.abs(a.getY() - b.getY());
-    }
-
-    public void digDen(Location location) {
-        if (den == null && energy >= 20) {
-            if (world.getTile(location) == null || world.getTile(location) instanceof NonBlocking) {
-                // Check for an alternative tile if needed
-                try {
-                    // Attempt to set the tile
-                    den = new WolfDen(location);
-                    den.addWolf(this);
-                    world.setTile(location, den); // Safely attempting to set the tile
-
-                    // Set visual information for wolf den
-                    DisplayInformation displayInformation = new DisplayInformation(Color.GRAY, "hole");
-                    program.setDisplayInformation(WolfDen.class, displayInformation);
-
-                    energy -= 20; // Adjust energy consumption
-                    System.out.println(this + " has dug a new den at location: " + location);
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Failed digging den at location: " + location + ". " + e.getMessage());
-                    // Consider alternative options if needed, e.g., try another location
-                }
-            } else {
-                System.out.println("Could not dig den at location: " + location + " because it's occupied by a non-blocking element.");
-                // Consider finding a new spot if desired
-            }
-        }
-    }
-
-    public Location getWolfLocation() {
-        return location;
-    }
-
-    public void setDen(WolfDen den) {
-        this.den = den;
-    }
-
-    public void relocate(World world, Location newLocation, Program program) {
-        this.location = newLocation;
-        world.setTile(newLocation, this);
-    }
-
-    public static Set<Wolf> getPack() {
-        return pack;
-    }
-
-    public void moveToDen(World world) {
-        if (den != null) {
-            Location denLocation = den.getLocation();
-            if (!location.equals(denLocation)) {
-                try {
-                    world.move(this, denLocation);
-                    location = denLocation;
-                    den.addWolf(this); // Tilføj ulv til hulen
-                    System.out.println(this + " moved to den at location: " + denLocation);
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Move to den failed: " + e.getMessage());
-                }
-            }
-        }
-    }
-
-    public void leaveDen(World world) {
-        if (den != null) {
-            try {
-                Location exitLocation = den.getLocation();
-                program.setDisplayInformation(Wolf.class, new DisplayInformation(Color.GRAY, "wolf"));
-                System.out.println(this + " left den and moved to location: " + exitLocation);
-            } catch (IllegalArgumentException e) {
-                System.err.println("Leaving den failed: " + e.getMessage());
-            }
-        }
-    }
-
 }

@@ -1,17 +1,17 @@
 package actions;
 
-import animals.Wolf;
+/*import animals.WolfPrøve;
 import itumulator.world.Location;
 
 import java.util.*;
 
 public class PackManager {
-    private static List<Set<Wolf>> packs = new ArrayList<>();
-    private static Map<Wolf, Set<Wolf>> alphaToPackMap = new HashMap<>();
-    private static Map<Wolf, Location> wolfLocations = new HashMap<>();
+    private static List<Set<WolfPrøve>> packs = new ArrayList<>();
+    private static Map<WolfPrøve, Set<WolfPrøve>> alphaToPackMap = new HashMap<>();
+    public static Map<WolfPrøve, Location> wolfLocations = new HashMap<>();
 
-    public static void addWolfToPack(Wolf wolf, Wolf alpha) {
-        Set<Wolf> pack = alphaToPackMap.get(alpha);
+    public static void addWolfToPack(WolfPrøve wolf, WolfPrøve alpha) {
+        Set<WolfPrøve> pack = alphaToPackMap.get(alpha);
         if (pack == null) {
             pack = new HashSet<>();
             packs.add(pack);
@@ -22,20 +22,20 @@ public class PackManager {
         System.out.println("Wolf added to pack with alpha " + alpha + ": Current pack size " + pack.size());
     }
 
-    public static void createNewPack(Wolf alpha) {
+    public static void createNewPack(WolfPrøve alpha) {
         if (alpha == null) {
             throw new IllegalArgumentException("Alpha cannot be null");
         }
-        Set<Wolf> newPack = new HashSet<>();
+        Set<WolfPrøve> newPack = new HashSet<>();
         newPack.add(alpha);
         packs.add(newPack);
         alphaToPackMap.put(alpha, newPack);
-        Wolf.alphaWolf = alpha;
+        WolfPrøve.alphaWolf = alpha;
         System.out.println("A new pack has been formed with " + alpha + " as the alpha.");
     }
 
-    public static Set<Wolf> getPack(Wolf wolf) {
-        for (Set<Wolf> pack : packs) {
+    public static Set<WolfPrøve> getPack(WolfPrøve wolf) {
+        for (Set<WolfPrøve> pack : packs) {
             if (pack.contains(wolf)) {
                 return pack;
             }
@@ -43,16 +43,16 @@ public class PackManager {
         return Collections.emptySet();
     }
 
-    public static Location getWolfLocation(Wolf wolf) {
+    public static Location getWolfLocation(WolfPrøve wolf) {
         return wolfLocations.get(wolf); // Hent ulvens seneste kendte lokation
     }
 
-    public static void removeWolfFromPack(Wolf wolf) {
-        for (Set<Wolf> pack : packs) {
+    public static void removeWolfFromPack(WolfPrøve wolf) {
+        for (Set<WolfPrøve> pack : packs) {
             if (pack.contains(wolf)) {
                 pack.remove(wolf);
                 wolfLocations.remove(wolf);
-                if (wolf.equals(Wolf.alphaWolf)) {
+                if (wolf.equals(WolfPrøve.alphaWolf)) {
                     updateAlpha(pack);
                 }
                 if (pack.isEmpty()) {
@@ -63,14 +63,15 @@ public class PackManager {
         }
     }
 
-    private static void updateAlpha(Set<Wolf> pack) {
+    private static void updateAlpha(Set<WolfPrøve> pack) {
         if (!pack.isEmpty()) {
-            Wolf newAlpha = pack.iterator().next();
+            WolfPrøve newAlpha = pack.iterator().next();
             alphaToPackMap.put(newAlpha, pack);
-            Wolf.alphaWolf = newAlpha;
+            WolfPrøve.alphaWolf = newAlpha;
             System.out.println("New alpha has been chosen: " + newAlpha);
         } else {
             System.out.println("Pack is empty, no new alpha can be chosen.");
         }
     }
 }
+*/

@@ -1,179 +1,92 @@
 package actions;
 
 import animals.Wolf;
+import itumulator.executable.DisplayInformation;
 import itumulator.world.Location;
 import itumulator.world.NonBlocking;
 import itumulator.world.World;
-
 import itumulator.executable.Program;
-import java.util.*;
+
+import java.awt.*;
+import java.util.Set;
 
 public class WolfDen implements NonBlocking {
-    private Location location;
-    private List<Wolf> connectedWolves;
-    private boolean hasReproduced;
+    private final Location denLocation;
+    private final World world;
+    private final WolfPack wolfPack;
 
-    public WolfDen(Location location) {
-        this.location = location;
-        this.connectedWolves = new ArrayList<>();
-        this.hasReproduced = false;
+
+    public WolfDen(World world, Location location, WolfPack pack, Program program) {
+        if (world == null || location == null || pack == null) {
+            throw new IllegalArgumentException("world, location and pack must not be null");
+        }
+        this.world = world;
+        this.denLocation = location;
+        this.wolfPack = pack;
+
+        DisplayInformation displayInformation = new DisplayInformation(Color.DARK_GRAY, "hole");
+        program.setDisplayInformation(WolfDen.class, displayInformation);
     }
 
-    public void beginNight() {
-        hasReproduced = false;
+    public void restNearDen() {
+        Set<Location> nearbyLocations = world.getSurroundingTiles(denLocation, 3); //Område tæt på hulen
+        Set<Wolf> nearbyWolves = world.getAll(Wolf.class, nearbyLocations);
+
+        for (Wolf wolf : nearbyWolves) {
+            if (wolfPack.isPartOfPack(wolf)) {
+                wolf.setEnergy(Math.min(wolf.getEnergy() + 20, 100));
+                System.out.println("Wolf #" + wolf.getId() + " rested near the den and regained energy!");
+            }
+        }
     }
 
-    public void addWolf(Wolf wolf) {
-        connectedWolves.add(wolf);
-        wolf.setDen(this);
-    }
 
-    public void removeWolf(Wolf wolf) {
-        connectedWolves.remove(wolf);
-        wolf.setDen(null);
-    }
+    // Reproduktion i hulen
+    public void reproduce() {
+        // Find ulve tæt på hulen
+        Set<Location> nearbyLocations = world.getSurroundingTiles(denLocation, 3);
+        Set<Wolf> nearbyWolves = world.getAll(Wolf.class, nearbyLocations);
 
-    public void hideWolves(World world) {
-        for (Wolf wolf : connectedWolves) {
-            if (world.contains(wolf) && world.isOnTile(wolf)) {  // Tjekker om ulven er på kortet
-                world.remove(wolf);
-                System.out.println(wolf + " is now hiding in the den.");
+        // Tæl alpha-ulve og andre ulve
+        Wolf alpha = null;
+        Wolf mate = null;
+
+        for (Wolf wolf : nearbyWolves) {
+            if (wolfPack.isAlpha(wolf)) {
+                alpha = wolf;
+            } else if (wolfPack.isPartOfPack(wolf) && mate == null) {
+                mate = wolf; // Find den første mulige "mate" ulv
+            }
+        }
+        // Reproduktion: Skal ske mellem alpha og en anden ulv
+        if (alpha != null && mate != null) {
+            // Generer en ny ulv med forældre i flokken
+            Location emptyTile = findEmptyTileNearDen();
+            if (emptyTile != null) {
+                Wolf newWolf = new Wolf(world, emptyTile, null, 0, wolfPack); // Nyfødt ulv med alder 0
+                wolfPack.addToPack(alpha, newWolf);
+                System.out.println("A new wolf (ID #" + newWolf.getId() + ") was born in the pack led by Wolf #" + alpha.getId());
             } else {
-                System.out.println(wolf + " could not hide as it is not currently on the map.");
+                System.out.println("No empty tile was found near the den to place the new wolf.");
             }
+        } else {
+            System.out.println("Reproduction cannot occur. Conditions not met near the den.");
         }
     }
 
-    public void revealWolves(World world, Program program) {
-        Iterator<Wolf> iterator = connectedWolves.iterator();
-        while (iterator.hasNext()) {
-            Wolf wolf = iterator.next();
-            Location spot = findSuitableLocation(world);
-            if (spot != null && world.isTileEmpty(spot)) {
-                try {
-                    wolf.relocate(world, spot, program);
-                    System.out.println(wolf + " has emerged from the den at " + spot);
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Failed to reveal wolf " + wolf + ": " + e.getMessage());
-                }
-            }
-        }
+    // Find en tom placering tæt på hulen
+    private Location findEmptyTileNearDen() {
+        Set<Location> nearbyEmpty = world.getEmptySurroundingTiles(denLocation);
+        return nearbyEmpty.isEmpty() ? null : nearbyEmpty.iterator().next(); // Returnér en tom lokation, hvis det er muligt
     }
 
-    public void connectPackToDen(List<Wolf> wolfPack) {
-        for (Wolf wolf : wolfPack) {
-            if( !connectedWolves.contains(wolf) ) {
-                connectedWolves.add(wolf);
-                wolf.setDen(this);
-            }
-        }
+    // Getters
+    public Location getDenLocation() {
+        return denLocation;
     }
 
-
-    public void reproduce(World world, Program program, int maxNewWolves) {
-        if (hasReproduced) {
-            System.out.println("Already reproduced this night.");
-            return;
-        }
-
-        int newWolvesCount = 0;
-        int potentialNewWolves = Math.min(maxNewWolves, connectedWolves.size() / 2);
-
-        Random random = new Random();
-
-        for (int i = 0; i < potentialNewWolves; i++) {
-            // Kun reproducerer med en chance (f.eks., 50%)
-            if (random.nextBoolean()) {
-                System.out.println("Wolves are attempting to reproduce in the den.");
-
-                Location newLocation = findSuitableLocation(world);
-                if (newLocation != null) {
-                    Wolf newWolf = new Wolf(world, newLocation, program);
-                    addWolf(newWolf);
-                    System.out.println("A new wolf was born in the den.");
-                    newWolvesCount++;
-                }
-            }
-        }
-
-        hasReproduced = true; // Marker som reproduceret
-        System.out.println("Reproduction cycle completed. Total new wolves: " + newWolvesCount);
+    public WolfPack getWolfPack() {
+        return wolfPack;
     }
 
-    public Location getLocation() {
-        return location;
-    }
-
-    public List<Wolf> getConnectedWolves() {
-        return connectedWolves;
-    }
-
-    public Set<Location> getPath(World world, Location start, Location end) {
-        Set<Location> path = new LinkedHashSet<>();
-        Queue<Location> queue = new LinkedList<>();
-        Map<Location, Location> cameFrom = new HashMap<>();
-
-        // Check for null locations to prevent NullPointerException
-        if (start == null || end == null) {
-            System.out.println("Warning: Provided locations cannot be null.");
-            return path; // Return an empty path when either location is null
-        }
-
-        queue.add(start);
-        cameFrom.put(start, null);
-
-        while (!queue.isEmpty()) {
-            Location current = queue.poll();
-
-            if (current.equals(end)) {
-                Location step = current;
-                while (step != null) {
-                    path.add(step);
-                    step = cameFrom.get(step);
-                }
-                return path;
-            }
-
-            for (Location next : world.getSurroundingTiles(current)) {
-                if (!cameFrom.containsKey(next) && (world.getTile(next) == null || world.getTile(next) instanceof NonBlocking)) {
-                    queue.add(next);
-                    cameFrom.put(next, current);
-                }
-            }
-        }
-        path.add(start);
-        path.add(end);
-        return path;
-    }
-
-    private Location findSuitableLocation(World world) {
-        // Vi antager, at den nuværende position er centrum for søgningen
-        Location center = this.location;
-
-        // Henter alle tilstødende positioner omkring centrum
-        Set<Location> surroundingLocations = world.getSurroundingTiles(center);
-
-        // Prøv at finde en tom lokation flere gange, med øget radius hver gang
-        int maxAttempts = 5;
-        for (int attempt = 0; attempt < maxAttempts; attempt++) {
-            for (Location potentialLocation : surroundingLocations) {
-                if (world.isTileEmpty(potentialLocation) || world.getTile(potentialLocation) instanceof NonBlocking) {
-                    return potentialLocation; // Return the first available location
-                }
-            }
-            surroundingLocations = expandSearchArea(world, center, attempt);
-        }
-
-        // Hvis ingen egnet lokation findes, returneres null
-        System.out.println("Could not find a suitable location for a new wolf.");
-        return null;
-    }
-
-    private Set<Location> expandSearchArea(World world, Location center, int attempt) {
-        // Logik til at udvide søgeområdet
-        Set<Location> expandedArea = new HashSet<>();
-        // Implementer logik til at inkludere flere tilstødende områder baseret på attempt
-        // Dette kan inkludere at bruge en større radius eller inkorporere mere intelligente søgemetoder
-        return expandedArea;
-    }
 }
