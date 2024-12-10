@@ -35,8 +35,12 @@ public class WolfDen implements NonBlocking {
 
     public void hideWolves(World world) {
         for (Wolf wolf : connectedWolves) {
-            world.remove(wolf);
-            System.out.println(wolf + " is now hiding in the den.");
+            if (world.contains(wolf) && world.isOnTile(wolf)) {  // Tjekker om ulven er på kortet
+                world.remove(wolf);
+                System.out.println(wolf + " is now hiding in the den.");
+            } else {
+                System.out.println(wolf + " could not hide as it is not currently on the map.");
+            }
         }
     }
 
@@ -48,7 +52,6 @@ public class WolfDen implements NonBlocking {
             if (spot != null && world.isTileEmpty(spot)) {
                 try {
                     wolf.relocate(world, spot, program);
-                    wolf.getPack().add(wolf);
                     System.out.println(wolf + " has emerged from the den at " + spot);
                 } catch (IllegalArgumentException e) {
                     System.out.println("Failed to reveal wolf " + wolf + ": " + e.getMessage());

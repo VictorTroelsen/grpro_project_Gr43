@@ -6,13 +6,14 @@ import itumulator.world.World;
 import itumulator.world.Location;
 import itumulator.world.NonBlocking;
 import actions.WolfDen;
+import programManagers.PackManager;
 
 import java.awt.*;
 import java.util.*;
 
 
 public class Wolf extends Carnivore{
-    private static Wolf alphaWolf;
+    public static Wolf alphaWolf;
     private static Set<Wolf> pack = new HashSet<>();
     private final boolean isPlaced;
     private WolfDen den;
@@ -22,10 +23,7 @@ public class Wolf extends Carnivore{
     public Wolf(World world, Location initiallocation, Program program) {
         super(world,initiallocation,program);
         this.location = initiallocation;
-        if (pack.isEmpty()) {
-            alphaWolf = this;
-        }
-        pack.add(this);
+        PackManager.addWolfToPack(this);
         this.isPlaced = placeAnimal(initiallocation);
         this.energy = 120;
 
@@ -34,34 +32,33 @@ public class Wolf extends Carnivore{
 
     public void act(World world) {
         if (world.isDay()) {
+            // Om dagen jager de og koordinerer deres bevægelser
+            if (pack.size() > 1 && den == null) {
+                Location denLocation = findEmptyAdjacentLocation();
+                if (denLocation != null) {
+                    digDen(denLocation);
+                }
+            } else if (den != null) {
+                den.revealWolves(world, program); // Når dagen begynder, skal ulvene dukke op fra hulen
+            }
+
             coordinatePackMovement(world);
             System.out.println(this + " energy before hunt: " + energy);
             if (energy < 120) {
                 hunt();
             }
-        }
-
-        super.act(world);
-
-        if (pack.size() > 1 && den == null) {
-            Location denLocation = findEmptyAdjacentLocation();
-            if (denLocation != null) {
-                digDen(denLocation);
-            }
-        }
-
-        if (world.isNight() && den != null) {
+        } else if (world.isNight() && den != null) {
+            // Om natten bevæger sig til hulen og gemmer sig
             moveToDen(world);
-
-            // Voks har reproduktion kapaciteten kun om natten
+            den.hideWolves(world);
             if (energy > 70 && pack.size() > 1) {
                 int maxNewWolves = pack.size() / 2;
                 den.reproduce(world, program, maxNewWolves);
                 energy -= 20;
             }
-        } else if (world.isDay() && den != null) {
-            leaveDen(world);
         }
+
+        super.act(world);
 
         if (energy <= 0 || age > maximumAge()) {
             dies();
@@ -85,9 +82,9 @@ public class Wolf extends Carnivore{
                         location = loc;
 
                         // Del energi mellem ulvene i pakken
-                        int energyShare = 100 / pack.size();
+                        int energyShare = 100;
                         for (Wolf wolf : pack) {
-                            wolf.energy += energyShare;
+                            wolf.energy = Math.min(wolf.energy + energyShare, 120);
                         }
                         System.out.println(this + " moved to location " + loc + " after eating.");
                     } catch (IllegalArgumentException e) {
@@ -98,13 +95,13 @@ public class Wolf extends Carnivore{
             }
         } else {
             // Flyt mod alphaen, hvis ikke alpha og den er på jagt
-            moveToPack();
+            coordinatePackMovement(world);
         }
     }
 
     @Override
     public int maximumAge() {
-        return 40;
+        return 20;
     }
 
     @Override
@@ -127,11 +124,10 @@ public class Wolf extends Carnivore{
     }
 
     public void coordinatePackMovement(World world) {
-        if (pack.size() > 1 && world.isDay()) {
-            for (Wolf wolf : pack) {
-                if (!wolf.equals(alphaWolf)) {
-                    wolf.moveToPack();
-                }
+        Location alphaLocation = getAlphaLocation();
+        for (Wolf wolf : pack) {
+            if (!wolf.equals(alphaWolf) && wolf.distance(wolf.location, alphaLocation) > 2) {
+                wolf.moveToPack(alphaLocation);
             }
         }
     }
@@ -149,14 +145,30 @@ public class Wolf extends Carnivore{
         return alphaWolf;
     }
 
-    public void createNewPack() {
-        if (!pack.isEmpty()) {
-            wolves = pack.toArray(new Wolf[0]);
-        }
-
-        if(alphaWolf == null){
+    public Location getAlphaLocation() {
+        if (alphaWolf == null) {
             chooseNewAlpha();
         }
+        if (alphaWolf != null && world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
+            return world.getLocation(alphaWolf);
+        } else {
+            chooseNewAlpha();
+            if (alphaWolf != null && world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
+                return world.getLocation(alphaWolf);
+            } else {
+                throw new IllegalStateException("Ingen gyldig alpha ulv fundet i verdenen.");
+            }
+        }
+    }
+
+    public void createNewPack(World world, Program program) {
+        Set<Wolf> newPack = new HashSet<>();
+        Wolf newAlpha = this;
+        newPack.add(newAlpha);
+        pack.remove(this);
+        pack = newPack;
+        alphaWolf = newAlpha;
+        System.out.println("A new pack has been created with " + newAlpha + " as the alpha.");
     }
 
     public void chooseNewAlpha() {
@@ -168,24 +180,24 @@ public class Wolf extends Carnivore{
         Random random = new Random();
         int randomIndex = random.nextInt(pack.size());
         alphaWolf = pack.toArray(new Wolf[0])[randomIndex];
+
+        if(world.contains(alphaWolf) && world.isOnTile(alphaWolf)) {
+            System.out.println("Ny alpha er valgt: " + alphaWolf);
+        } else {
+            System.out.println("Den valgte alpha er ikke korrekt placeret, forsøger at flytte.");
+        }
     }
 
 
-    public void moveToPack() {
-        if (!this.equals(alphaWolf) && world.contains(this) && world.isOnTile(this)) {
-            Location alphaLocation = world.getLocation(alphaWolf);
-            int maxRange = 2;  // Juster dette tal, hvis det er nødvendigt
-            if (distance(this.location, alphaLocation) > maxRange) {
-                Set<Location> path = world.getSurroundingTiles(this.location);
-                Location bestMove = chooseBestMoveTowards(alphaLocation, path);
+    public void moveToPack(Location alphaLocation) {
+        Set<Location> path = world.getSurroundingTiles(this.location);
+        Location bestMove = chooseBestMoveTowards(alphaLocation, path);
 
-                if (bestMove != null && world.isTileEmpty(bestMove)) {
-                    world.move(this, bestMove);
-                    this.location = bestMove;
+        if (bestMove != null && world.isTileEmpty(bestMove)) {
+            world.move(this, bestMove);
+            this.location = bestMove;
 
-                    System.out.println(this + " moved towards the pack leader at location: " + alphaLocation);
-                }
-            }
+            System.out.println(this + " moved towards the pack leader at location: " + alphaLocation);
         }
     }
 
